@@ -4445,6 +4445,15 @@ ddoinv(void)
             doswapweapon();
             return_to_inv = TRUE;
         }
+        else if (pickcnt <= INVENTORY_ACTION_BASE)
+        {
+            int res = handle_inventory_action(invlet, pickcnt, &return_to_inv);
+            if (res || !return_to_inv)
+            {
+                issue_gui_command(GUI_CMD_TOGGLE_MENU_POSITION_SAVING, GHMENU_STYLE_INVENTORY, 0, (char*)0);
+                return res;
+            }
+        }
         else if (flags.inventory_obj_cmd)
         {
             int res = display_item_command_menu_by_invlet(invlet, pickcnt, &return_to_inv);
@@ -4491,6 +4500,12 @@ doseeworn(void)
         {
             doswapweapon();
             return_to_inv = TRUE;
+        }
+        else if (pickcnt <= INVENTORY_ACTION_BASE)
+        {
+            int res = handle_inventory_action(invlet, pickcnt, &return_to_inv);
+            if (res || !return_to_inv)
+                return res;
         }
         else if (flags.inventory_obj_cmd)
         {
@@ -4547,6 +4562,138 @@ is_special_show_condition_satisfied(int i)
 
 #define NUM_CMD_SECTIONS 3
 
+/*
+ * Parameters:
+ *   otmp: the object the command would be applied to
+ *   i: extcmdlist index
+ * Returns TRUE if the single-object command can be used with otmp
+ */
+static boolean
+is_item_command_acceptable(struct obj *otmp, int i)
+{
+    char class_list[BUFSZ] = "";
+    boolean isstashing, acceptable;
+
+    if (!otmp || !extcmdlist[i].getobj_word)
+        return FALSE;
+
+    if ((extcmdlist[i].flags & SPECIAL_SHOW_CONDITIONS) && !is_special_show_condition_satisfied(i))
+        return FALSE;
+
+    if (extcmdlist[i].getobj_classes)
+        Strcpy(class_list, extcmdlist[i].getobj_classes);
+    else if (!strcmp(extcmdlist[i].getobj_word, "break"))
+        setbreakclasses(class_list);
+    else if (!strcmp(extcmdlist[i].getobj_word, "cut rock or wood with"))
+        setapplyclasses(class_list);
+    else if (!strcmp(extcmdlist[i].getobj_word, "use or apply"))
+        setapplyclasses(class_list);
+    else if (!strcmp(extcmdlist[i].getobj_word, "take items out of"))
+        setapplyclasses(class_list);
+    else if (!strcmp(extcmdlist[i].getobj_word, "put items in"))
+        setapplyclasses(class_list);
+    else if (!strcmp(extcmdlist[i].getobj_word, "ready"))
+    {
+        Strcpy(class_list, (uslinging()
+            || (uswapwep
+                && objects[uswapwep->otyp].oc_skill == P_SLING))
+            ? getobj_bullets
+            : getobj_ready_objs);
+    }
+
+    isstashing = !strcmp(extcmdlist[i].getobj_word, "stash") || !strcmp(extcmdlist[i].getobj_word, "stash into a container on the floor");
+    if (isstashing)
+        set_current_container_to_dummyobj();
+    acceptable = acceptable_getobj_obj(otmp, class_list, extcmdlist[i].getobj_word);
+    if (isstashing)
+        set_current_container_to_null();
+    return acceptable;
+}
+
+/*
+ * Runs the extcmdlist command selected_action with otmp autoselected for its getobj prompt
+ * Parameters:
+ *   otmp_ptr: the object; updated if a split-off part is merged back; the object may be deallocated by the command
+ *   selected_action: extcmdlist index
+ *   pickcnt: the count picked from the menu; -1 or less for the whole stack
+ *   repeatmenu_ptr: set to TRUE if the command menu should be shown again
+ *   return_to_inv_ptr: set to TRUE if the inventory should be shown again; may be null
+ * Returns the command's result (nonzero if time passed)
+ */
+static int
+run_item_command(struct obj **otmp_ptr, int selected_action, int64_t pickcnt, boolean *repeatmenu_ptr, boolean *return_to_inv_ptr)
+{
+    int res = 0;
+    boolean repeatmenu = FALSE, returntoinv = FALSE;
+    struct obj *otmp = *otmp_ptr;
+    char invlet = otmp->invlet;
+
+    if (extcmdlist[selected_action].ef_funct && pickcnt != 0)
+    {
+        struct obj* otmpsplit = 0;
+        boolean autoobjgone = FALSE;
+        trackedobj_gone = FALSE;
+        if (pickcnt <= -1 || pickcnt >= otmp->quan)
+            getobj_autoselect_obj = otmp;
+        else
+        {
+            otmpsplit = splitobj(otmp, pickcnt);
+            if (otmpsplit)
+            {
+                debugprint("display_item_command_menu");
+                obj_extract_self(otmpsplit); /* free from inv */
+                set_obj_nomerge(otmpsplit, 1);
+                otmpsplit = hold_another_object(otmpsplit, "Oops!  %s out of your grasp!", The(aobjnam(otmpsplit, "slip")), (const char*)0, FALSE);
+                if (otmpsplit)
+                    set_obj_nomerge(otmpsplit, 0);
+                else
+                {
+                    if (repeatmenu_ptr)
+                        *repeatmenu_ptr = FALSE;
+                    return 1;
+                }
+            }
+
+            getobj_autoselect_obj = otmpsplit;
+        }
+
+        /* Change the saved command string to action-item based equivalent to allow use in repeat */
+        if (extcmdlist[selected_action].bound_key && invlet)
+        {
+            savech(0);
+            savech((char)extcmdlist[selected_action].bound_key);
+            savech(invlet);
+        }
+
+        int tracked_otmp_id = getobj_autoselect_obj != otmp ? add_to_obj_tracking(otmp) : -1;
+        trackedobj = getobj_autoselect_obj;
+        res = (extcmdlist[selected_action].ef_funct)();
+        getobj_autoselect_obj = (struct obj*)0;
+        trackedobj = (struct obj*)0;
+        autoobjgone = trackedobj_gone;
+        trackedobj_gone = FALSE;
+        repeatmenu = (boolean)((extcmdlist[selected_action].flags & ALLOW_RETURN_TO_CMD_MENU) != 0) && !res;
+        returntoinv = (boolean)((extcmdlist[selected_action].flags & ALLOW_RETURN_TO_INVENTORY) != 0) && !res;
+        boolean otmp_gone = finish_obj_tracking(tracked_otmp_id);
+
+        if (!autoobjgone && !otmp_gone) /* otmp or otmpsplit may have been deallocated, e.g., scrolls */
+        {
+            if ((repeatmenu || returntoinv || !res) && otmpsplit && otmpsplit != otmp && otmpsplit->where == OBJ_INVENT && otmp->where == OBJ_INVENT)
+            {
+                debugprint("display_item_command_menu: %d, %d", otmp->otyp, otmpsplit->otyp);
+                (void)merged(&otmp, &otmpsplit); /* Merge the split object back to the original */
+                *otmp_ptr = otmp;
+            }
+        }
+
+        if (return_to_inv_ptr)
+            *return_to_inv_ptr = returntoinv;
+    }
+    if (repeatmenu_ptr)
+        *repeatmenu_ptr = repeatmenu;
+    return res;
+}
+
 int
 display_item_command_menu(struct obj *otmp, int64_t pickcnt, boolean *return_to_inv_ptr)
 {
@@ -4554,14 +4701,13 @@ display_item_command_menu(struct obj *otmp, int64_t pickcnt, boolean *return_to_
         return 0;
 
     int res = 0;
-    boolean repeatmenu = FALSE, returntoinv = FALSE;
+    boolean repeatmenu = FALSE;
     xchar x = 0, y = 0;
     get_obj_location(otmp, &x, &y, CONTAINED_TOO | BURIED_TOO);
     int glyph = obj_to_glyph(otmp, rn2_on_display_rng);
     int gui_glyph = maybe_get_replaced_glyph(glyph, x, y, data_to_replacement_info(glyph, LAYER_OBJECT, otmp, (struct monst*)0, 0UL, 0UL, 0UL, MAT_NONE, 0));
     do
     {
-        char invlet = otmp->invlet;
         int cmd_idx = 0;
         menu_item* pick_list = (menu_item*)0;
         winid win;
@@ -4579,7 +4725,6 @@ display_item_command_menu(struct obj *otmp, int64_t pickcnt, boolean *return_to_
         char headerbuf[BUFSZ] = "";
         const struct ext_func_tab* efp;
         int actioncount = 0;
-        char class_list[BUFSZ] = "";
         int longest_len = 0;
         int longest_len_header = 0;
         int slen = 0;
@@ -4614,38 +4759,7 @@ display_item_command_menu(struct obj *otmp, int64_t pickcnt, boolean *return_to_
                 if (!(extcmdlist[i].flags & section_flags[j]) || !extcmdlist[i].getobj_word)
                     continue;
 
-                if ((extcmdlist[i].flags & SPECIAL_SHOW_CONDITIONS) && !is_special_show_condition_satisfied(i))
-                    continue;
-
-                Strcpy(class_list, "");
-                if (extcmdlist[i].getobj_classes)
-                    Strcpy(class_list, extcmdlist[i].getobj_classes);
-                else if (!strcmp(extcmdlist[i].getobj_word, "break"))
-                    setbreakclasses(class_list);
-                else if (!strcmp(extcmdlist[i].getobj_word, "cut rock or wood with"))
-                    setapplyclasses(class_list);
-                else if (!strcmp(extcmdlist[i].getobj_word, "use or apply"))
-                    setapplyclasses(class_list);
-                else if (!strcmp(extcmdlist[i].getobj_word, "take items out of"))
-                    setapplyclasses(class_list);
-                else if (!strcmp(extcmdlist[i].getobj_word, "put items in"))
-                    setapplyclasses(class_list);
-                else if (!strcmp(extcmdlist[i].getobj_word, "ready"))
-                {
-                    Strcpy(class_list, (uslinging()
-                        || (uswapwep
-                            && objects[uswapwep->otyp].oc_skill == P_SLING))
-                        ? getobj_bullets
-                        : getobj_ready_objs);
-                }
-
-                boolean isstashing = !strcmp(extcmdlist[i].getobj_word, "stash") || !strcmp(extcmdlist[i].getobj_word, "stash into a container on the floor");
-                if (isstashing)
-                    set_current_container_to_dummyobj();
-                boolean acceptable = acceptable_getobj_obj(otmp, class_list, extcmdlist[i].getobj_word);
-                if (isstashing)
-                    set_current_container_to_null();
-                if (!acceptable)
+                if (!is_item_command_acceptable(otmp, i))
                     continue;
 
                 cnt++;
@@ -4676,38 +4790,7 @@ display_item_command_menu(struct obj *otmp, int64_t pickcnt, boolean *return_to_
                 if (!(extcmdlist[i].flags & section_flags[j]) || !extcmdlist[i].getobj_word)
                     continue;
 
-                if ((extcmdlist[i].flags & SPECIAL_SHOW_CONDITIONS) && !is_special_show_condition_satisfied(i))
-                    continue;
-
-                Strcpy(class_list, "");
-                if (extcmdlist[i].getobj_classes)
-                    Strcpy(class_list, extcmdlist[i].getobj_classes);
-                else if (!strcmp(extcmdlist[i].getobj_word, "break"))
-                    setbreakclasses(class_list);
-                else if (!strcmp(extcmdlist[i].getobj_word, "cut rock or wood with"))
-                    setapplyclasses(class_list);
-                else if (!strcmp(extcmdlist[i].getobj_word, "use or apply"))
-                    setapplyclasses(class_list);
-                else if (!strcmp(extcmdlist[i].getobj_word, "take items out of"))
-                    setapplyclasses(class_list);
-                else if (!strcmp(extcmdlist[i].getobj_word, "put items in"))
-                    setapplyclasses(class_list);
-                else if (!strcmp(extcmdlist[i].getobj_word, "ready"))
-                {
-                    Strcpy(class_list, (uslinging()
-                        || (uswapwep
-                            && objects[uswapwep->otyp].oc_skill == P_SLING))
-                        ? getobj_bullets
-                        : getobj_ready_objs);
-                }
-
-                boolean isstashing = !strcmp(extcmdlist[i].getobj_word, "stash") || !strcmp(extcmdlist[i].getobj_word, "stash into a container on the floor");
-                if (isstashing)
-                    set_current_container_to_dummyobj();
-                boolean acceptable = acceptable_getobj_obj(otmp, class_list, extcmdlist[i].getobj_word);
-                if (isstashing)
-                    set_current_container_to_null();
-                if (!acceptable)
+                if (!is_item_command_acceptable(otmp, i))
                     continue;
 
                 efp = &extcmdlist[i];
@@ -4787,67 +4870,230 @@ display_item_command_menu(struct obj *otmp, int64_t pickcnt, boolean *return_to_
             return 0;
         }
 
-        res = 0;
-        repeatmenu = FALSE;
-        returntoinv = FALSE;
         int selected_action = cmd_idx - 1;
-        if (extcmdlist[selected_action].ef_funct && pickcnt != 0)
-        {
-            struct obj* otmpsplit = 0;
-            boolean autoobjgone = FALSE;
-            trackedobj_gone = FALSE;
-            if (pickcnt <= -1 || pickcnt >= otmp->quan)
-                getobj_autoselect_obj = otmp;
-            else
-            {
-                otmpsplit = splitobj(otmp, pickcnt);
-                if (otmpsplit)
-                {
-                    debugprint("display_item_command_menu");
-                    obj_extract_self(otmpsplit); /* free from inv */
-                    set_obj_nomerge(otmpsplit, 1);
-                    otmpsplit = hold_another_object(otmpsplit, "Oops!  %s out of your grasp!", The(aobjnam(otmpsplit, "slip")), (const char*)0, FALSE);
-                    if (otmpsplit)
-                        set_obj_nomerge(otmpsplit, 0);
-                    else
-                        return 1;
-                }
-
-                getobj_autoselect_obj = otmpsplit;
-            }
-
-            /* Change the saved command string to action-item based equivalent to allow use in repeat */
-            if (extcmdlist[selected_action].bound_key && invlet)
-            {
-                savech(0);
-                savech((char)extcmdlist[selected_action].bound_key);
-                savech(invlet);
-            }
-
-            int tracked_otmp_id = getobj_autoselect_obj != otmp ? add_to_obj_tracking(otmp) : -1;
-            trackedobj = getobj_autoselect_obj;
-            res = (extcmdlist[selected_action].ef_funct)();
-            getobj_autoselect_obj = (struct obj*)0;
-            trackedobj = (struct obj*)0;
-            autoobjgone = trackedobj_gone;
-            trackedobj_gone = FALSE;
-            repeatmenu = (boolean)((extcmdlist[selected_action].flags & ALLOW_RETURN_TO_CMD_MENU) != 0) && !res;
-            returntoinv = (boolean)((extcmdlist[selected_action].flags & ALLOW_RETURN_TO_INVENTORY) != 0) && !res;
-            boolean otmp_gone = finish_obj_tracking(tracked_otmp_id);
-
-            if (!autoobjgone && !otmp_gone) /* otmp or otmpsplit may have been deallocated, e.g., scrolls */
-            {
-                if ((repeatmenu || returntoinv || !res) && otmpsplit && otmpsplit != otmp && otmpsplit->where == OBJ_INVENT && otmp->where == OBJ_INVENT)
-                {
-                    debugprint("display_item_command_menu: %d, %d", otmp->otyp, otmpsplit->otyp);
-                    (void)merged(&otmp, &otmpsplit); /* Merge the split object back to the original */
-                }
-            }
-
-            if (return_to_inv_ptr)
-                *return_to_inv_ptr = returntoinv;
-        }
+        res = run_item_command(&otmp, selected_action, pickcnt, &repeatmenu, return_to_inv_ptr);
     } while (repeatmenu);
+    return res;
+}
+
+/* Returns the extcmdlist index of the command calling funct, or -1 */
+static int
+get_item_command_index(int (*funct)(void))
+{
+    int i;
+    for (i = 0; extcmdlist[i].ef_txt; i++)
+    {
+        if (extcmdlist[i].ef_funct == funct)
+            return i;
+    }
+    return -1;
+}
+
+/* Returns the extcmdlist index of the first acceptable command in functs (terminated by a null), or -1 */
+static int
+get_first_acceptable_item_command(struct obj *otmp, int (**functs)(void))
+{
+    int k, idx;
+    for (k = 0; functs[k]; k++)
+    {
+        idx = get_item_command_index(functs[k]);
+        if (idx >= 0 && is_item_command_acceptable(otmp, idx))
+            return idx;
+    }
+    return -1;
+}
+
+/* The command taking off or unwielding otmp, or -1 */
+static int
+get_unequip_item_command(struct obj *otmp)
+{
+    int (*functs[4])(void);
+    functs[0] = dotakeoff;
+    functs[1] = doremring;
+    functs[2] = dounwield;
+    functs[3] = 0;
+    return get_first_acceptable_item_command(otmp, functs);
+}
+
+/* The double-click command for otmp, or -1 if the command menu should be shown instead */
+static int
+get_default_item_command(struct obj *otmp)
+{
+    int (*functs[3])(void);
+    functs[0] = functs[1] = functs[2] = 0;
+
+    if (otmp->owornmask)
+        return get_unequip_item_command(otmp);
+
+    switch (otmp->oclass)
+    {
+    case ARMOR_CLASS:
+        functs[0] = dowear;
+        break;
+    case WEAPON_CLASS:
+        functs[0] = dowield;
+        break;
+    case RING_CLASS:
+    case AMULET_CLASS:
+    case MISCELLANEOUS_CLASS:
+        functs[0] = doputon;
+        break;
+    case POTION_CLASS:
+        functs[0] = dodrink;
+        break;
+    case SCROLL_CLASS:
+    case SPBOOK_CLASS:
+        functs[0] = doread;
+        break;
+    case FOOD_CLASS:
+        functs[0] = doeat;
+        break;
+    case WAND_CLASS:
+        functs[0] = dozap;
+        break;
+    case TOOL_CLASS:
+        if (is_weptool(otmp))
+        {
+            functs[0] = dowield;
+        }
+        else
+        {
+            functs[0] = doputon;
+            functs[1] = doapply;
+        }
+        break;
+    default:
+        break;
+    }
+    return get_first_acceptable_item_command(otmp, functs);
+}
+
+/*
+ * Performs an inventory action sent by the grid inventory as the picked count
+ * Parameters:
+ *   invlet: the inventory letter of the item acted on
+ *   code: INVENTORY_ACTION_BASE - (action * 256 + target)
+ *   return_to_inv_ptr: set to TRUE if the inventory should be shown again
+ * Returns nonzero if time passed
+ */
+int
+handle_inventory_action(char invlet, int64_t code, boolean *return_to_inv_ptr)
+{
+    struct obj *otmp = 0, *otmp2;
+    int64_t packed = INVENTORY_ACTION_BASE - code;
+    int action = (int)(packed / 256);
+    int target = (int)(packed % 256);
+    int cmd_idx = -1;
+    int res = 0;
+    boolean repeatmenu = FALSE;
+
+    if (return_to_inv_ptr)
+        *return_to_inv_ptr = TRUE;
+
+    for (otmp2 = invent; otmp2; otmp2 = otmp2->nobj)
+        if (otmp2->invlet == invlet)
+            otmp = otmp2;
+
+    if (!otmp)
+        return 0;
+
+    switch (action)
+    {
+    case INVENTORY_ACTION_DEFAULT:
+        cmd_idx = get_default_item_command(otmp);
+        if (cmd_idx < 0)
+            return display_item_command_menu(otmp, -1, return_to_inv_ptr);
+        break;
+    case INVENTORY_ACTION_EQUIP:
+        switch (target)
+        {
+        case INVENTORY_SLOT_RIGHT_HAND:
+            cmd_idx = get_item_command_index(dowield);
+            break;
+        case INVENTORY_SLOT_LEFT_HAND:
+            cmd_idx = get_item_command_index(is_shield(otmp) ? dowear : dowield);
+            break;
+        case INVENTORY_SLOT_SWAP:
+            if (otmp == uwep)
+                return doswapweapon();
+            You_ex1(ATR_NONE, CLR_MSG_FAIL, "need to wield it before you can swap it to your alternate hand.");
+            return 0;
+        case INVENTORY_SLOT_QUIVER:
+            cmd_idx = get_item_command_index(dowieldquiver);
+            break;
+        case INVENTORY_SLOT_ARMOR:
+            cmd_idx = get_item_command_index(dowear);
+            break;
+        case INVENTORY_SLOT_ACCESSORY:
+            cmd_idx = get_item_command_index(doputon);
+            break;
+        default:
+            break;
+        }
+        break;
+    case INVENTORY_ACTION_UNEQUIP:
+        if (!otmp->owornmask)
+            return 0;
+        cmd_idx = get_unequip_item_command(otmp);
+        break;
+    case INVENTORY_ACTION_ADJUST:
+        /* Dropping an item onto a container in the grid puts it in; otherwise the letters are adjusted */
+        for (otmp2 = invent; otmp2; otmp2 = otmp2->nobj)
+            if (otmp2->invlet == (char)target && otmp2 != otmp)
+                break;
+        if (otmp2 && Is_proper_container(otmp2) && !Is_container(otmp))
+            return handle_inventory_action(invlet, INVENTORY_ACTION_BASE - (INVENTORY_ACTION_STASH * 256 + target), return_to_inv_ptr);
+
+        /* Free action; doorganize takes the destination letter from getobj_autoselect_invlet */
+        cmd_idx = get_item_command_index(doorganize);
+        if (cmd_idx >= 0 && target > 0 && target != (int)(uchar)invlet)
+        {
+            getobj_autoselect_invlet = (char)target;
+            res = run_item_command(&otmp, cmd_idx, -1, &repeatmenu, (boolean*)0);
+            getobj_autoselect_invlet = 0;
+            if (return_to_inv_ptr)
+                *return_to_inv_ptr = !res;
+        }
+        return res;
+    case INVENTORY_ACTION_STASH:
+    {
+        struct obj *container = 0;
+        for (otmp2 = invent; otmp2; otmp2 = otmp2->nobj)
+            if (otmp2->invlet == (char)target)
+                container = otmp2;
+        if (!container || container == otmp)
+            return 0;
+        cmd_idx = get_item_command_index(dostash);
+        if (cmd_idx < 0 || !is_item_command_acceptable(otmp, cmd_idx))
+            break;
+        if (return_to_inv_ptr)
+            *return_to_inv_ptr = FALSE;
+        stash_preselected_container = container;
+        res = run_item_command(&otmp, cmd_idx, -1, &repeatmenu, return_to_inv_ptr);
+        stash_preselected_container = 0;
+        if (!res && !occupation && !multi && !afternmv && return_to_inv_ptr)
+            *return_to_inv_ptr = TRUE; /* Nothing happened, so the grid stays open */
+        return res;
+    }
+    case INVENTORY_ACTION_DROP:
+        cmd_idx = get_item_command_index(dodrop);
+        break;
+    default:
+        return 0;
+    }
+
+    if (cmd_idx < 0 || !is_item_command_acceptable(otmp, cmd_idx))
+    {
+        play_sfx_sound(SFX_GENERAL_CANNOT);
+        You_ex(ATR_NONE, CLR_MSG_FAIL, "cannot do that with %s.", yname(otmp));
+        return 0;
+    }
+
+    if (return_to_inv_ptr)
+        *return_to_inv_ptr = FALSE;
+    res = run_item_command(&otmp, cmd_idx, -1, &repeatmenu, return_to_inv_ptr);
+    if (!res && !occupation && !multi && !afternmv && return_to_inv_ptr)
+        *return_to_inv_ptr = TRUE; /* Nothing happened and nothing was started, so the grid stays open */
     return res;
 }
 
@@ -7312,6 +7558,12 @@ doprinuse(void)
                 doswapweapon();
                 return_to_inv = TRUE;
             }
+            else if (pickcnt <= INVENTORY_ACTION_BASE)
+            {
+                int res = handle_inventory_action(invlet, pickcnt, &return_to_inv);
+                if (res || !return_to_inv)
+                    return res;
+            }
             else if (flags.inventory_obj_cmd)
             {
                 int res = display_item_command_menu_by_invlet(invlet, pickcnt, & return_to_inv);
@@ -7631,6 +7883,14 @@ doorganize(void) /* inventory organizer by Del Lamb */
 
     /* get 'to' slot to use as destination */
     for (trycnt = 1; ; ++trycnt) {
+        if (getobj_autoselect_invlet)
+        {
+            /* Destination given by dragging in the grid inventory */
+            let = getobj_autoselect_invlet;
+            getobj_autoselect_invlet = 0;
+        }
+        else
+        {
 #ifdef GNH_MOBILE
         let = display_used_invlets(splitting ? obj->invlet : 0, TRUE);
         if (!let)
@@ -7651,6 +7911,7 @@ doorganize(void) /* inventory organizer by Del Lamb */
                 goto noadjust;
         }
 #endif
+        }
         if (index(quitchars, let)
             /* adjusting to same slot is meaningful since all
                compatible stacks get collected along the way,

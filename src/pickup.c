@@ -5398,7 +5398,20 @@ dostash(void)
     }
 
     struct obj* container = 0;
-    if (context.quick_bag_obj_oid)
+    if (stash_preselected_container)
+    {
+        /* Container given by dragging in the grid inventory */
+        container = stash_preselected_container;
+        stash_preselected_container = 0;
+        if (container->where != OBJ_INVENT || !Is_proper_container(container) || is_obj_olocked(container) || container == otmp || Is_specialized_container(container) || Is_container_with_closed_lid(container))
+        {
+            play_sfx_sound(SFX_GENERAL_CANNOT);
+            You_ex(ATR_NONE, CLR_MSG_FAIL, "cannot stash %s into %s.", yname(otmp), yname(container));
+            (void)unsplitobj(otmp);
+            return 0;
+        }
+    }
+    else if (context.quick_bag_obj_oid)
         container = o_on_open_inventory(context.quick_bag_obj_oid);
     if (!container || !Is_proper_container(container) || is_obj_olocked(container) || container == otmp || Is_specialized_container(container) || Is_container_with_closed_lid(container))
         container = select_other_container(invent, (struct obj*)0, FALSE);

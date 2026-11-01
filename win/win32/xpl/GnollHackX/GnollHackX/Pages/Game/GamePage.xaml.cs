@@ -4988,6 +4988,8 @@ namespace GnollHackX.Pages.Game
                     break;
             }
 
+            UpdateGridInventoryModeForMenu(menuinfo.Style, menuinfo.SelectionHow);
+
             if (MenuCanvas.ClickOKOnSelection && !MenuCanvas.MenuButtonStyle)
             {
                 MenuOKButton.Text = "Auto";
@@ -18947,6 +18949,12 @@ namespace GnollHackX.Pages.Game
             if (menuItems == null)
                 return;
 
+            if (GridInventoryPaintActive)
+            {
+                PaintGridInventory(canvas, canvaswidth, canvasheight, menuItems);
+                return;
+            }
+
             var localMenuDrawBounds = MenuDrawBounds;
             if (localMenuDrawBounds == null)
                 return;
@@ -20376,6 +20384,18 @@ namespace GnollHackX.Pages.Game
         {
             if (MenuDrawOnlyClear)
                 return;
+            if (GridInventoryPaintActive)
+            {
+                try
+                {
+                    HandleGridInventoryTouch(sender, e);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                }
+                return;
+            }
             if (MenuEquipmentSideShown)
             {
                 try

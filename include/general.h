@@ -1402,6 +1402,23 @@ enum cat_breeds {
 #define INVENTORY_CANCEL_RESULT -1
 #define INVENTORY_SWAP_RESULT   -2
 
+/* Inventory actions from the grid inventory, sent as the picked count of the selected item:
+   count = INVENTORY_ACTION_BASE - (action * 256 + target); keep in sync with GHConstants.cs */
+#define INVENTORY_ACTION_BASE       (-1000)
+#define INVENTORY_ACTION_DEFAULT    1 /* target unused */
+#define INVENTORY_ACTION_EQUIP      2 /* target = INVENTORY_SLOT_* */
+#define INVENTORY_ACTION_UNEQUIP    3 /* target unused */
+#define INVENTORY_ACTION_ADJUST     4 /* target = destination invlet */
+#define INVENTORY_ACTION_STASH      5 /* target = invlet of the container */
+#define INVENTORY_ACTION_DROP       6 /* target unused */
+
+#define INVENTORY_SLOT_RIGHT_HAND   1
+#define INVENTORY_SLOT_LEFT_HAND    2
+#define INVENTORY_SLOT_SWAP         3
+#define INVENTORY_SLOT_QUIVER       4
+#define INVENTORY_SLOT_ARMOR        5
+#define INVENTORY_SLOT_ACCESSORY    6
+
 #define XRAY_VISION_RANGE 3
 #define ASTRAL_VISION_RANGE 5
 #define MAX_DURATION_CONSTANT_MULTIPLIER 2

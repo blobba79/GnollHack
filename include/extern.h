@@ -1681,6 +1681,7 @@ E int display_item_command_menu_by_invlet(char, int64_t, boolean*);
 E int display_item_command_menu(struct obj*, int64_t, boolean*);
 E char display_inventory(const char *, boolean, int, boolean);
 E char display_inventory_with_header(const char*, boolean, int64_t*, int, boolean, boolean, boolean);
+E int handle_inventory_action(char, int64_t, boolean*);
 E int display_binventory(int, int, boolean);
 E struct obj *display_cinventory(struct obj *);
 E struct obj *display_minventory(struct monst *, int, char *);

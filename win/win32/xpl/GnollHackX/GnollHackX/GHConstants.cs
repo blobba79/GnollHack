@@ -280,6 +280,22 @@ namespace GnollHackX
         public const uint MainCanvasAnimationTime = 2500000;
         public const uint AuxiliaryCanvasAnimationTime = 3600000;
         public const float MenuDefaultRowHeight = 30.0f;
+
+        /* Grid inventory actions, sent as the picked count; keep in sync with INVENTORY_ACTION_* and INVENTORY_SLOT_* in general.h */
+        public const int INVENTORY_ACTION_BASE = -1000;
+        public const int INVENTORY_ACTION_DEFAULT = 1;
+        public const int INVENTORY_ACTION_EQUIP = 2;
+        public const int INVENTORY_ACTION_UNEQUIP = 3;
+        public const int INVENTORY_ACTION_ADJUST = 4;
+        public const int INVENTORY_ACTION_STASH = 5;
+        public const int INVENTORY_ACTION_DROP = 6;
+        public const int INVENTORY_SLOT_RIGHT_HAND = 1;
+        public const int INVENTORY_SLOT_LEFT_HAND = 2;
+        public const int INVENTORY_SLOT_SWAP = 3;
+        public const int INVENTORY_SLOT_QUIVER = 4;
+        public const int INVENTORY_SLOT_ARMOR = 5;
+        public const int INVENTORY_SLOT_ACCESSORY = 6;
+        public static int InventoryActionCode(int action, int target) { return INVENTORY_ACTION_BASE - (action * 256 + target); }
         public const float DefaultGeneralVolume = 1.0f;
         public const float DefaultMusicVolume = 0.5f;
         public const float DefaultAmbientVolume = 0.5f;
