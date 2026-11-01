@@ -376,7 +376,7 @@ namespace GnollHackX
                 Activate(_overseerWindow);
                 return true;
             }
-            Window window = new Window(page) { Title = "Gnoll Overseer" };
+            Window window = new Window(page) { Title = string.IsNullOrEmpty(page.Title) ? "Gnoll Overseer" : page.Title };
             RestoreGeometry(window, "Overseer", 900, 800);
             window.Destroying += OverseerWindow_Destroying;
             _overseerWindow = window;
@@ -610,6 +610,9 @@ namespace GnollHackX
         public static char GetContainerLetter(uint oid) { return '\0'; }
         public static void CloseAll() { }
         public static void GameEnded() { }
+        public static bool OpenOverseerWindow(Page page) { return false; }
+        public static bool IsOverseerWindowOpen { get { return false; } }
+        public static void CloseWindowOf(Page page) { }
         public static void SettingsChanged() { }
 #endif
     }

@@ -636,6 +636,15 @@ namespace GnollHackX.Pages.Game
             MainLayout.IsEnabled = false;
             GHApp.PlayButtonClickedSound();
 
+#if GNH_MAUI
+            if (GHApp.OverseerUseLocalAi)
+            {
+                await OpenLocalOverseerPage();
+                MainLayout.IsEnabled = true;
+                return;
+            }
+#endif
+
             if (!GHApp.HasInternetAccess)
             {
                 await ShowMessagePopupAsync("Internet Connection Required", "Internet access is required to use Gnoll Overseer.", "OK");
@@ -747,6 +756,30 @@ namespace GnollHackX.Pages.Game
 
             MainLayout.IsEnabled = true;
         }
+
+#if GNH_MAUI
+        /* Gnoll Overseer on the player's own AI: everything stays on this computer, so the account, internet, web view and
+           AI data checks of the official Overseer do not apply */
+        private async Task OpenLocalOverseerPage()
+        {
+            string snapshotText = "";
+            if (GHApp.OverseerSendGameContext)
+            {
+                try
+                {
+                    AiSnapshotResult snapshot = await GHApp.GenerateAiSnapshotTextAsync();
+                    snapshotText = OverseerPage.TruncateSnapshotForLlm(snapshot != null ? snapshot.Text : null) ?? "";
+                }
+                catch (Exception ex)
+                {
+                    GHApp.WriteGHLog("AI snapshot generation failed: " + ex.Message);
+                }
+            }
+            if (GHGuiWindows.IsEnabled && GHGuiWindows.OpenOverseerWindow(new GHLocalOverseerPage(snapshotText, true)))
+                return;
+            await GHApp.PushModalPageAsync(new GHLocalOverseerPage(snapshotText, false));
+        }
+#endif
 
         public bool HandleKeyPress(int key, bool isCtrl, bool isMeta)
         {

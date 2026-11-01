@@ -173,6 +173,17 @@ namespace GnollHackX.Pages.MainScreen
             AboutGrid.IsEnabled = false;
             GHApp.PlayButtonClickedSound();
 
+#if GNH_MAUI
+            if (GHApp.OverseerUseLocalAi)
+            {
+                /* Gnoll Overseer on the player's own AI; there is no game, so no game state is sent */
+                if (!(GHGuiWindows.IsEnabled && GHGuiWindows.OpenOverseerWindow(new GHLocalOverseerPage("", true))))
+                    await GHApp.PushModalPageAsync(new GHLocalOverseerPage("", false));
+                AboutGrid.IsEnabled = true;
+                return;
+            }
+#endif
+
             if (!GHApp.HasInternetAccess)
             {
                 await ShowMessagePopupAsync("Internet Connection Required", "Internet access is required to use Gnoll Overseer.", "OK");

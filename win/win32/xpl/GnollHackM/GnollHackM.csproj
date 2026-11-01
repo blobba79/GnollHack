@@ -414,6 +414,11 @@
     <None Remove="..\GnollHackX\GnollHackX\Pages\Game\GamePage.GridInventory.cs" />
     <None Remove="..\GnollHackX\GnollHackX\GHGridInventoryView.cs" />
     <None Remove="..\GnollHackX\GnollHackX\GHGuiWindows.cs" />
+    <None Remove="..\GnollHackX\GnollHackX\GHLocalOverseerClient.cs" />
+    <None Remove="..\GnollHackX\GnollHackX\GHLocalOverseerTools.cs" />
+    <None Remove="..\GnollHackX\GnollHackX\GHLocalOverseerControl.cs" />
+    <None Remove="..\GnollHackX\GnollHackX\Pages\Game\GHLocalOverseerPage.cs" />
+    <None Remove="..\GnollHackX\GnollHackX\Pages\Game\GamePage.LocalOverseer.cs" />
     <None Remove="..\GnollHackX\GnollHackX\Pages\Game\NamePage.xaml.cs" />
     <None Remove="..\GnollHackX\GnollHackX\Pages\Game\OutRipPage.xaml.cs" />
     <None Remove="..\GnollHackX\GnollHackX\Pages\Game\WikiPage.xaml.cs" />
@@ -727,6 +732,11 @@
     <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\GamePage.GridInventory.cs" />
     <Compile Include="..\GnollHackX\GnollHackX\GHGridInventoryView.cs" />
     <Compile Include="..\GnollHackX\GnollHackX\GHGuiWindows.cs" />
+    <Compile Include="..\GnollHackX\GnollHackX\GHLocalOverseerClient.cs" />
+    <Compile Include="..\GnollHackX\GnollHackX\GHLocalOverseerTools.cs" />
+    <Compile Include="..\GnollHackX\GnollHackX\GHLocalOverseerControl.cs" />
+    <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\GHLocalOverseerPage.cs" />
+    <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\GamePage.LocalOverseer.cs" />
     <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\NamePage.xaml.cs" />
     <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\OutRipPage.xaml.cs" />
     <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\WikiPage.xaml.cs" />
