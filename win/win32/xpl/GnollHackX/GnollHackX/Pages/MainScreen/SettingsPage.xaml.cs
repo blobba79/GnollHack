@@ -3196,7 +3196,13 @@ namespace GnollHackX.Pages.MainScreen
             XlogAccountButton.IsEnabled = false;
             GHApp.PlayButtonClickedSound();
             GHApp.XlogReleaseAccount = XlogReleaseAccountSwitch.IsToggled;
-            await GHApp.OpenBrowser(this, "GnollHack Account", new Uri(GHApp.XlogAccountAddress));
+            /* A build without the secrets file's addresses has no account link; new Uri would throw and close the app */
+            Uri accountUri;
+            if (Uri.TryCreate(GHApp.XlogAccountAddress, UriKind.Absolute, out accountUri))
+                await GHApp.OpenBrowser(this, "GnollHack Account", accountUri);
+            else
+                await ShowMessagePopupAsync("No Account Link",
+                    "This build of GnollHack has no address for the GnollHack Account page. Set up your account in the official version of GnollHack, or enter a custom account link with the Link button.", "OK");
             XlogAccountButton.IsEnabled = true;
         }
 
