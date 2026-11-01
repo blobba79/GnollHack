@@ -364,6 +364,8 @@ namespace GnollHackX
             ShowPolearmContextButton = Preferences.Get("ShowPolearmContextButton", GHConstants.DefaultShowPolearmContextButton);
             EquipmentFlipAnimation = Preferences.Get("EquipmentFlipAnimation", true);
             ShowEquipmentIcons = Preferences.Get("ShowEquipmentIcons", true);
+            InventoryGridMode = Preferences.Get("InventoryGridMode", true);
+            SeparateGuiWindows = Preferences.Get("SeparateGuiWindows", true);
 
             ulong freeDiskSpaceInBytes = PlatformService?.GetDeviceFreeDiskSpaceInBytes() ?? 0;
             FreeDiskSpaceInBytes = freeDiskSpaceInBytes;
@@ -3907,6 +3909,8 @@ namespace GnollHackX
         private static int _showPolearmContextButton = 0;
         private static int _equipmentFlipAnimation = 0;
         private static int _showEquipmentIcons = 0;
+        private static int _inventoryGridMode = 0;
+        private static int _separateGuiWindows = 0;
         private static int _isSuspended = 0;
 
         public static bool CtrlDown { get { return Interlocked.CompareExchange(ref _ctrlDown, 0, 0) != 0; } set { Interlocked.Exchange(ref _ctrlDown, value ? 1 : 0); } }
@@ -4105,6 +4109,9 @@ namespace GnollHackX
         public static bool ShowPolearmContextButton { get { return Interlocked.CompareExchange(ref _showPolearmContextButton, 0, 0) != 0; } set { Interlocked.Exchange(ref _showPolearmContextButton, value ? 1 : 0); } }
         public static bool EquipmentFlipAnimation { get { return Interlocked.CompareExchange(ref _equipmentFlipAnimation, 0, 0) != 0; } set { Interlocked.Exchange(ref _equipmentFlipAnimation, value ? 1 : 0); } }
         public static bool ShowEquipmentIcons { get { return Interlocked.CompareExchange(ref _showEquipmentIcons, 0, 0) != 0; } set { Interlocked.Exchange(ref _showEquipmentIcons, value ? 1 : 0); } }
+        public static bool InventoryGridMode { get { return Interlocked.CompareExchange(ref _inventoryGridMode, 0, 0) != 0; } set { Interlocked.Exchange(ref _inventoryGridMode, value ? 1 : 0); } }
+        /* The inventory, carried containers and Overseer open in separate windows where GHGuiWindows.IsSupported */
+        public static bool SeparateGuiWindows { get { return Interlocked.CompareExchange(ref _separateGuiWindows, 0, 0) != 0; } set { Interlocked.Exchange(ref _separateGuiWindows, value ? 1 : 0); } }
         public static bool IsSuspended { get { return Interlocked.CompareExchange(ref _isSuspended, 0, 0) != 0; } set { Interlocked.Exchange(ref _isSuspended, value ? 1 : 0); } }
 
         public static bool DownloadOnDemandPackage

@@ -44,6 +44,7 @@ namespace GnollHackX.Pages.Game
         IGHGamepadHandlingPage, IGHGamepadPopupPage
     {
         private string _baseOverseerUrl;
+        private readonly bool _inOwnWindow;
         private string _snapshotText;
 
         private string _sessionId = "";
@@ -71,9 +72,11 @@ namespace GnollHackX.Pages.Game
 #endif
 
         /// <param name="snapshotText">The AI snapshot text, or empty for no game context.</param>
-        public OverseerPage(string baseOverseerUrl, string snapshotText)
+        /// <param name="inOwnWindow">True if the page is shown in a separate window (GHGuiWindows) instead of as a modal page.</param>
+        public OverseerPage(string baseOverseerUrl, string snapshotText, bool inOwnWindow = false)
         {
             InitializeComponent();
+            _inOwnWindow = inOwnWindow;
 
             _baseOverseerUrl = baseOverseerUrl;
             _snapshotText = snapshotText;
@@ -122,7 +125,11 @@ namespace GnollHackX.Pages.Game
 #endif
             ProgressOverlay.PropertyChanged += ProgressOverlay_PropertyChanged;
             GHGame curGame = GHApp.CurrentGHGame;
-            if (curGame != null)
+            if (_inOwnWindow && curGame != null)
+            {
+                /* The game goes on beside the window, with its own music */
+            }
+            else if (curGame != null)
             {
                 curGame.ResponseQueue.Enqueue(new GHResponse(curGame, GHRequestType.PlayMusic, GHConstants.OverseerGHSound, GHConstants.OverseerEventPath, GHConstants.IntroBankId, GHConstants.OverseerVolume, 1.0f));
             }
@@ -946,6 +953,11 @@ namespace GnollHackX.Pages.Game
             _backPressed = true;
             if (playClickSound)
                 GHApp.PlayButtonClickedSound();
+            if (_inOwnWindow)
+            {
+                GHGuiWindows.CloseWindowOf(this);
+                return;
+            }
             GHGame curGame = GHApp.CurrentGHGame;
             if (curGame != null)
             {

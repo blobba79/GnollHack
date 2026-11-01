@@ -4137,6 +4137,15 @@ use_container(struct obj **objp, int held, boolean more_containers, int applymod
         Sprintf(emptymsg, "%s is %sempty.", Ysimple_name2(current_container),
                 (quantum_cat || cursed_mbag) ? "now " : "");
 
+    if (held && obj->where == OBJ_INVENT && gui_containers_in_windows())
+    {
+        /* The contents are shown in a GUI window that stays open; items are taken out and put in there */
+        if (!is_obj_cknown(current_container))
+            used = 1; /* gaining info */
+        gui_open_container_window(current_container);
+        goto containerdone;
+    }
+
     struct obj* last_container = (struct obj*)0;
     struct obj* last_floor_container = (struct obj*)0;
     int other_containter_count = count_other_containers(invent, obj, &last_container, FALSE);
@@ -5370,6 +5379,35 @@ set_current_container_to_null(void)
     current_container = 0;
 }
 
+/* Takes the object with o_id oid out of the carried container cont, for a GUI container window;
+   returns 1 if time passed */
+int
+gui_take_out_of_container(struct obj *cont, unsigned oid)
+{
+    struct obj *otmp;
+    int res;
+
+    if (!cont)
+        return 0;
+    for (otmp = cont->cobj; otmp; otmp = otmp->nobj)
+        if (otmp->o_id == oid)
+            break;
+    if (!otmp)
+        return 0;
+
+    if (is_obj_olocked(cont))
+    {
+        play_simple_container_sound(cont, CONTAINER_SOUND_TYPE_TRY_LOCKED);
+        pline("%s locked.", Tobjnam(cont, "are"));
+        return 0;
+    }
+
+    current_container = cont;
+    res = out_container(otmp);
+    current_container = 0;
+    return res > 0 ? 1 : 0;
+}
+
 /* the stash command */
 int
 dostash(void)
@@ -5398,7 +5436,20 @@ dostash(void)
     }
 
     struct obj* container = 0;
-    if (context.quick_bag_obj_oid)
+    if (stash_preselected_container)
+    {
+        /* Container given by dragging in the grid inventory */
+        container = stash_preselected_container;
+        stash_preselected_container = 0;
+        if (container->where != OBJ_INVENT || !Is_proper_container(container) || is_obj_olocked(container) || container == otmp || Is_specialized_container(container) || Is_container_with_closed_lid(container))
+        {
+            play_sfx_sound(SFX_GENERAL_CANNOT);
+            You_ex(ATR_NONE, CLR_MSG_FAIL, "cannot stash %s into %s.", yname(otmp), yname(container));
+            (void)unsplitobj(otmp);
+            return 0;
+        }
+    }
+    else if (context.quick_bag_obj_oid)
         container = o_on_open_inventory(context.quick_bag_obj_oid);
     if (!container || !Is_proper_container(container) || is_obj_olocked(container) || container == otmp || Is_specialized_container(container) || Is_container_with_closed_lid(container))
         container = select_other_container(invent, (struct obj*)0, FALSE);

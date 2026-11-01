@@ -246,6 +246,12 @@ namespace GnollHackX.Pages.MainScreen
                 return;
             }
 
+            if (GHGuiWindows.IsEnabled && GHGuiWindows.OpenOverseerWindow(new OverseerPage(GHApp.OverseerAddress, "", true)))
+            {
+                /* Opened in its own window */
+                AboutGrid.IsEnabled = true;
+                return;
+            }
             var overseerPage = new OverseerPage(GHApp.OverseerAddress, "");
             await GHApp.PushModalPageAsync(overseerPage);
             AboutGrid.IsEnabled = true;

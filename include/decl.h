@@ -286,6 +286,9 @@ E NEARDATA struct kinfo {
 } killer;
 
 E NEARDATA struct obj* getobj_autoselect_obj;
+E NEARDATA char getobj_autoselect_invlet; /* preselected destination letter for #adjust; not saved */
+E NEARDATA struct obj* stash_preselected_container; /* preselected container for stash; not saved */
+E NEARDATA boolean gui_windows_dirty; /* the GUI windows need to be refreshed; not saved */
 E NEARDATA const char getobj_comestibles[];
 E NEARDATA const char getobj_offerfodder[];
 E NEARDATA const char getobj_all_count[];

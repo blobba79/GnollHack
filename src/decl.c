@@ -310,6 +310,9 @@ NEARDATA int gnh_has_rogue_level = 1;
 boolean disallow_keyboard_commands_in_wait_loop = FALSE;
 
 NEARDATA struct obj* getobj_autoselect_obj = (struct obj*)0;
+NEARDATA char getobj_autoselect_invlet = 0;
+NEARDATA struct obj* stash_preselected_container = (struct obj*)0;
+NEARDATA boolean gui_windows_dirty = FALSE;
 
 /* getobj class definitions */
 NEARDATA const char getobj_comestibles[] = { FOOD_CLASS, REAGENT_CLASS, 0 };

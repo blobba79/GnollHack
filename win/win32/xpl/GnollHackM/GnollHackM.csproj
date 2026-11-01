@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <!-- BASE PROPERTIES -->
   <PropertyGroup>
@@ -411,6 +411,9 @@
     <None Remove="..\GnollHackX\GnollHackX\Pages\Game\GamePage.Radial.cs" />
     <None Remove="..\GnollHackX\GnollHackX\Pages\Game\GamePage.GamepadDialogs.cs" />
     <None Remove="..\GnollHackX\GnollHackX\Pages\Game\GamePage.Gamepad.cs" />
+    <None Remove="..\GnollHackX\GnollHackX\Pages\Game\GamePage.GridInventory.cs" />
+    <None Remove="..\GnollHackX\GnollHackX\GHGridInventoryView.cs" />
+    <None Remove="..\GnollHackX\GnollHackX\GHGuiWindows.cs" />
     <None Remove="..\GnollHackX\GnollHackX\Pages\Game\NamePage.xaml.cs" />
     <None Remove="..\GnollHackX\GnollHackX\Pages\Game\OutRipPage.xaml.cs" />
     <None Remove="..\GnollHackX\GnollHackX\Pages\Game\WikiPage.xaml.cs" />
@@ -721,6 +724,9 @@
     <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\GamePage.Radial.cs" />
     <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\GamePage.GamepadDialogs.cs" />
     <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\GamePage.Gamepad.cs" />
+    <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\GamePage.GridInventory.cs" />
+    <Compile Include="..\GnollHackX\GnollHackX\GHGridInventoryView.cs" />
+    <Compile Include="..\GnollHackX\GnollHackX\GHGuiWindows.cs" />
     <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\NamePage.xaml.cs" />
     <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\OutRipPage.xaml.cs" />
     <Compile Include="..\GnollHackX\GnollHackX\Pages\Game\WikiPage.xaml.cs" />

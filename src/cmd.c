@@ -6557,6 +6557,7 @@ struct ext_func_tab extcmdlist[] = {
 #if defined (USE_TILES) && !defined(GNH_MOBILE)
     { M('_'), "grid", "toggle tile grid on/off", dotogglegrid, IFBURIED | AUTOCOMPLETE },
 #endif
+    { M('K'), "guiaction", "perform an action sent by a GUI window", doguiaction, IFBURIED },
     { M('h'), "handedness", "toggle swap weapon handedness", doswaphandedness, IFBURIED | AUTOCOMPLETE | INCMDMENU },
     { '?', "help", "give a help message", dohelp, IFBURIED | GENERALCMD },
     { '\0', "herecmdmenu", "show menu of commands you can do here", doherecmdmenu, IFBURIED },
@@ -10064,6 +10065,8 @@ parse(void)
     context.move = 1;
     flush_screen(1); /* Flush screen buffer. Put the cursor on the hero. */
     maybe_post_crash_context();
+    refresh_gui_windows(); /* The GUI windows show the current state before the next command */
+    issue_boolean_gui_command(GUI_CMD_AWAITING_COMMAND, TRUE);
 
 #ifdef ALTMETA
     alt_esc = iflags.altmeta; /* readchar() hack */
@@ -10144,6 +10147,7 @@ parse(void)
     }
     clear_nhwindow(WIN_MESSAGE);
 
+    issue_boolean_gui_command(GUI_CMD_AWAITING_COMMAND, FALSE);
     iflags.in_parse = FALSE;
     return in_line;
 }
