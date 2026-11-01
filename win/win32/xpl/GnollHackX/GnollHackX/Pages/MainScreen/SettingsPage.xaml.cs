@@ -76,6 +76,7 @@ namespace GnollHackX.Pages.MainScreen
             { "Improved Menu Images", ("Use higher quality bilinear interpolation for menu images.", "**Off:** Nearest neighbour (faster but worse quality).\n**On:** Bilinear interpolation (slower but better quality).") },
             { "Highlighted Menu Keys", ("Color hotkeys based on light/dark mode.", "**Off:** Hotkeys are grayed.\n**On:** Hotkeys are colored black/white based on light/dark mode.") },
             { "Show Equipment Icons", ("Display equipment slot icons in inventory.", "Displays equipment slot icons in the inventory menu.") },
+            { "Separate Windows (PC)", ("Open the inventory, containers and Overseer in their own windows.", "**On:** The inventory can be opened in its own window that stays open (the button in the corner of the grid inventory), carried bags and boxes open in their own windows, and Gnoll Overseer opens in its own window, so that the game can be played beside them. Only on Windows.") },
             { "Grid Inventory", ("Show the inventory as a grid of slots.", "**Off:** The inventory is shown as a list.\n**On:** The inventory is shown as a grid of 52 letter slots next to the equipment slots. Click to select, double-click for the default action, right-click for all actions, and drag items to equip, unequip, move, stash or drop them. The list is still used when a game controller is active.") },
             { "Equipment Flip Animation", ("Enable 3D flip when switching inventory/equipment screens.", "Enables a 3D flip animation when moving between inventory and equipment screens.") },
             { "Worn Shows Equipment", ("Show graphical equipment screen when using the worn command.", "Determines whether the worn item command (`]`) shows a full graphical equipment screen with all body slots or a plain text list of currently worn items. Mirrors the `worn_shows_equipment` option.") },
@@ -1238,6 +1239,12 @@ namespace GnollHackX.Pages.MainScreen
             GHApp.InventoryGridMode = InventoryGridModeSwitch.IsToggled;
             Preferences.Set("InventoryGridMode", InventoryGridModeSwitch.IsToggled);
 
+            bool separateWindowsChanged = GHApp.SeparateGuiWindows != SeparateGuiWindowsSwitch.IsToggled;
+            GHApp.SeparateGuiWindows = SeparateGuiWindowsSwitch.IsToggled;
+            Preferences.Set("SeparateGuiWindows", SeparateGuiWindowsSwitch.IsToggled);
+            if (separateWindowsChanged)
+                GHGuiWindows.SettingsChanged();
+
 #if GNH_MAUI
             Microsoft.Maui.Controls.Picker[] simplePickers = new Microsoft.Maui.Controls.Picker[6] 
 #else
@@ -1559,7 +1566,7 @@ namespace GnollHackX.Pages.MainScreen
             bool breatheanimations = GHConstants.DefaultBreatheAnimations; //, put2bag = GHConstants.DefaultShowPickNStashContextCommand, prevwep = GHConstants.DefaultShowPrevWepContextCommand;
             bool devmode = GHConstants.DefaultDeveloperMode, logmessages = GHConstants.DefaultLogMessages, lowlevellogging = false, screenlogging = false, frameprofiler = false, framemarker = false, debugpostchannel = GHConstants.DefaultDebugPostChannel, tournament = false, hpbars = false, nhstatusbarclassic = GHConstants.IsDefaultStatusBarClassic, desktopstatusbar = false, rightaligned2ndrow = false, showscore = false, showxp = false, desktopbuttons = false, menufadeeffects = false, menuhighfilterquality = true, menuhighlightedkeys = false, pets = true, orbs = true, orbmaxhp = false, orbmaxmana = false, mapgrid = false, playermark = false, monstertargeting = false, walkarrows = true;
             bool forcemaxmsg = false, showexstatus = false, noclipmode = GHConstants.DefaultMapNoClipMode, silentmode = false, characterclickaction = false, metricsystem = false, diceasranges = true, damageformula = false, wornshowsequipment = true, autodig = false, ignorestopping = false;
-            bool postgamestatus = GHConstants.DefaultPosting, postxlog = GHConstants.DefaultPosting, postreplays = GHConstants.DefaultPosting, postbones = GHConstants.DefaultPosting, boneslistisblack = false, showkeyboardshortcuts = false, singlecmdpage = false, skillbutton = false, polearmbutton = false, equipmentflipanimation = true, showequipmenticons = true, inventorygridmode = true;
+            bool postgamestatus = GHConstants.DefaultPosting, postxlog = GHConstants.DefaultPosting, postreplays = GHConstants.DefaultPosting, postbones = GHConstants.DefaultPosting, boneslistisblack = false, showkeyboardshortcuts = false, singlecmdpage = false, skillbutton = false, polearmbutton = false, equipmentflipanimation = true, showequipmenticons = true, inventorygridmode = true, separateguiwindows = true;
 #if !SENTRY
             bool postdiagnostics = GHConstants.DefaultPosting;
 #endif
@@ -1677,6 +1684,7 @@ namespace GnollHackX.Pages.MainScreen
             equipmentflipanimation = Preferences.Get("EquipmentFlipAnimation", true);
             showequipmenticons = Preferences.Get("ShowEquipmentIcons", true);
             inventorygridmode = Preferences.Get("InventoryGridMode", true);
+            separateguiwindows = Preferences.Get("SeparateGuiWindows", true);
             maprefresh = GHApp.GetMapRefreshFPSPreference();
             if (_gamePage == null)
             {
@@ -2295,6 +2303,8 @@ namespace GnollHackX.Pages.MainScreen
             EquipmentFlipAnimationSwitch.IsToggled = equipmentflipanimation;
             ShowEquipmentIconsSwitch.IsToggled = showequipmenticons;
             InventoryGridModeSwitch.IsToggled = inventorygridmode;
+            SeparateGuiWindowsSwitch.IsToggled = separateguiwindows;
+            SeparateGuiWindowsGrid.IsVisible = GHGuiWindows.IsSupported;
             SetGamepadInitialValues();
             _doChangeVolume = true; // !GHApp.IsMuted;
         }

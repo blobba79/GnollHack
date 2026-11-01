@@ -1682,6 +1682,10 @@ E int display_item_command_menu(struct obj*, int64_t, boolean*);
 E char display_inventory(const char *, boolean, int, boolean);
 E char display_inventory_with_header(const char*, boolean, int64_t*, int, boolean, boolean, boolean);
 E int handle_inventory_action(char, int64_t, boolean*);
+E void refresh_gui_windows(void);
+E void gui_open_container_window(struct obj*);
+E boolean gui_containers_in_windows(void);
+E int doguiaction(void);
 E int display_binventory(int, int, boolean);
 E struct obj *display_cinventory(struct obj *);
 E struct obj *display_minventory(struct monst *, int, char *);
@@ -2838,6 +2842,7 @@ E boolean is_worn_by_type(struct obj *);
 E boolean is_wearable_by_type(struct obj*);
 E int ck_bag(struct obj *);
 E int stash_obj_in_container(struct obj*, struct obj*);
+E int gui_take_out_of_container(struct obj*, unsigned);
 #ifdef USE_TRAMPOLI
 E int in_container(struct obj *);
 E int out_container(struct obj *);

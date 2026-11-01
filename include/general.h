@@ -350,6 +350,7 @@ enum ghmenu_styles
     GHMENU_STYLE_VIEW_SPELL,
     GHMENU_STYLE_VIEW_SPELL_ALTERNATE,
     GHMENU_STYLE_INVENTORY_EQUIPMENT,
+    GHMENU_STYLE_CONTAINER_CONTENTS,
     MAX_GHMENU_STYLES
 };
 
@@ -733,6 +734,9 @@ enum gui_command_types {
     GUI_CMD_TOGGLE_METRIC_SYSTEM,
     GUI_CMD_TOGGLE_DAMAGE_FORMULA,
     GUI_CMD_CLEAR_TEXT_CACHES,
+    GUI_CMD_AWAITING_COMMAND,
+    GUI_CMD_OPEN_CONTAINER_WINDOW,
+    GUI_CMD_CLOSE_CONTAINER_WINDOW,
 };
 
 enum gui_achievement_types
@@ -1411,6 +1415,14 @@ enum cat_breeds {
 #define INVENTORY_ACTION_ADJUST     4 /* target = destination invlet */
 #define INVENTORY_ACTION_STASH      5 /* target = invlet of the container */
 #define INVENTORY_ACTION_DROP       6 /* target unused */
+#define INVENTORY_ACTION_MENU       7 /* shows the item command menu; target unused */
+#define INVENTORY_ACTION_TAKEOUT    8 /* invlet = container; the o_id of the contained object is sent separately */
+
+/* Actions sent by the GUI windows through the #guiaction command; not inventory actions */
+#define GUI_ACTION_MAGIC                'G' /* first byte read by #guiaction after its command key */
+#define GUI_ACTION_INVENTORY_WINDOW     20 /* target = 1 if the inventory window is open, 0 if not */
+#define GUI_ACTION_SEPARATE_WINDOWS     21 /* target = 1 if carried containers open in their own windows */
+#define GUI_ACTION_CLOSE_CONTAINER      22 /* the o_id of the container whose window was closed */
 
 #define INVENTORY_SLOT_RIGHT_HAND   1
 #define INVENTORY_SLOT_LEFT_HAND    2

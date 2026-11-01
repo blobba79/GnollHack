@@ -147,6 +147,9 @@ namespace GnollHackX
         private int _saveFileTrackingFinished = -1;
         private bool _abortShowMenuPage = false;
         private bool _requestSwapWeapon = false;
+        private int _awaitingCommand = 0;
+        /* True while the core waits for the next command, the only time GUI windows may send #guiaction */
+        public bool AwaitingCommand { get { return Interlocked.CompareExchange(ref _awaitingCommand, 0, 0) != 0; } private set { Interlocked.Exchange(ref _awaitingCommand, value ? 1 : 0); } }
 
         public GamePage ActiveGamePage => GHApp.CurrentGamePage;
         //{
@@ -2244,6 +2247,11 @@ namespace GnollHackX
                 {
                     _ghWindows[winid].MenuInfo.Header = prompt;
                     _ghWindows[winid].MenuInfo.Subtitle = subtitle;
+
+                    /* Menus for the GUI windows are never selected; their contents are sent to the windows */
+                    ghmenu_styles style = _ghWindows[winid].MenuInfo.Style;
+                    if (!PlayingReplay && (style == ghmenu_styles.GHMENU_STYLE_PERMANENT_INVENTORY || style == ghmenu_styles.GHMENU_STYLE_CONTAINER_CONTENTS))
+                        GHGuiWindows.PublishMenu(this, _ghWindows[winid].Publish());
                 }
             }
         }
@@ -3540,6 +3548,20 @@ namespace GnollHackX
             return 1;
         }
 
+        /* Sends an action of a GUI window to the core as the #guiaction command (see doguiaction); only while the core
+           waits for a command. Called on the UI thread. Returns false if the core was busy. */
+        public bool SendGuiAction(int action, int invlet, int target, uint oid)
+        {
+            if (!AwaitingCommand || PlayingReplay)
+                return false;
+            AwaitingCommand = false; /* The next GUI_CMD_AWAITING_COMMAND allows the next action */
+            int[] keys = new int[] { GHConstants.GuiActionCommandKey, GHConstants.GUI_ACTION_MAGIC, action & 0xFF, invlet & 0xFF, target & 0xFF,
+                (int)(oid & 0xFF), (int)((oid >> 8) & 0xFF), (int)((oid >> 16) & 0xFF), (int)((oid >> 24) & 0xFF) };
+            foreach (int key in keys)
+                ResponseQueue.Enqueue(new GHResponse(this, GHRequestType.GetChar, key));
+            return true;
+        }
+
         public void ClientCallback_IssueGuiCommand(int cmd_id, int cmd_param, int cmd_param2, string cmd_str)
         {
             if(cmd_id != (int)gui_command_types.GUI_CMD_LOAD_GLYPHS)
@@ -3599,6 +3621,22 @@ namespace GnollHackX
                     if (PlayingReplay && GHApp.IsReplaySearching)
                         return;
                     RequestQueue.Enqueue(new GHRequest(this, GHRequestType.SetToBlack));
+                    break;
+                case (int)gui_command_types.GUI_CMD_AWAITING_COMMAND:
+                    if (PlayingReplay)
+                        return;
+                    AwaitingCommand = cmd_param != 0;
+                    GHGuiWindows.NotifyAwaitingCommand(this, cmd_param != 0);
+                    break;
+                case (int)gui_command_types.GUI_CMD_OPEN_CONTAINER_WINDOW:
+                    if (PlayingReplay)
+                        return;
+                    GHGuiWindows.OpenContainerWindow(this, unchecked((uint)cmd_param));
+                    break;
+                case (int)gui_command_types.GUI_CMD_CLOSE_CONTAINER_WINDOW:
+                    if (PlayingReplay)
+                        return;
+                    GHGuiWindows.CloseContainerWindow(unchecked((uint)cmd_param));
                     break;
                 case (int)gui_command_types.GUI_CMD_CLEAR_TEXT_CACHES:
                     {

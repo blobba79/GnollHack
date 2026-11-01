@@ -289,6 +289,14 @@ namespace GnollHackX
         public const int INVENTORY_ACTION_ADJUST = 4;
         public const int INVENTORY_ACTION_STASH = 5;
         public const int INVENTORY_ACTION_DROP = 6;
+        public const int INVENTORY_ACTION_MENU = 7;
+        public const int INVENTORY_ACTION_TAKEOUT = 8;
+        /* The #guiaction command key and protocol; keep in sync with GUI_ACTION_* in general.h */
+        public const int GuiActionCommandKey = 0x80 | 'K';
+        public const int GUI_ACTION_MAGIC = 'G';
+        public const int GUI_ACTION_INVENTORY_WINDOW = 20;
+        public const int GUI_ACTION_SEPARATE_WINDOWS = 21;
+        public const int GUI_ACTION_CLOSE_CONTAINER = 22;
         public const int INVENTORY_SLOT_RIGHT_HAND = 1;
         public const int INVENTORY_SLOT_LEFT_HAND = 2;
         public const int INVENTORY_SLOT_SWAP = 3;

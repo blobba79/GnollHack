@@ -316,6 +316,12 @@ public static class MauiProgram
                     //});
                     windowsLifecycleBuilder.OnWindowCreated(window =>
                     {
+                        if (GHApp.WindowsXamlWindow != null && GHApp.WindowsXamlWindow != window)
+                        {
+                            /* A separate inventory, container or Overseer window (GHGuiWindows); the app's lifecycle,
+                               keyboard hook and closing stay with the main window */
+                            return;
+                        }
                         GHApp.WindowsXamlWindow = window;
                         window.Closed += (s, e) =>
                         {

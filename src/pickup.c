@@ -4137,6 +4137,15 @@ use_container(struct obj **objp, int held, boolean more_containers, int applymod
         Sprintf(emptymsg, "%s is %sempty.", Ysimple_name2(current_container),
                 (quantum_cat || cursed_mbag) ? "now " : "");
 
+    if (held && obj->where == OBJ_INVENT && gui_containers_in_windows())
+    {
+        /* The contents are shown in a GUI window that stays open; items are taken out and put in there */
+        if (!is_obj_cknown(current_container))
+            used = 1; /* gaining info */
+        gui_open_container_window(current_container);
+        goto containerdone;
+    }
+
     struct obj* last_container = (struct obj*)0;
     struct obj* last_floor_container = (struct obj*)0;
     int other_containter_count = count_other_containers(invent, obj, &last_container, FALSE);
@@ -5368,6 +5377,35 @@ void
 set_current_container_to_null(void)
 {
     current_container = 0;
+}
+
+/* Takes the object with o_id oid out of the carried container cont, for a GUI container window;
+   returns 1 if time passed */
+int
+gui_take_out_of_container(struct obj *cont, unsigned oid)
+{
+    struct obj *otmp;
+    int res;
+
+    if (!cont)
+        return 0;
+    for (otmp = cont->cobj; otmp; otmp = otmp->nobj)
+        if (otmp->o_id == oid)
+            break;
+    if (!otmp)
+        return 0;
+
+    if (is_obj_olocked(cont))
+    {
+        play_simple_container_sound(cont, CONTAINER_SOUND_TYPE_TRY_LOCKED);
+        pline("%s locked.", Tobjnam(cont, "are"));
+        return 0;
+    }
+
+    current_container = cont;
+    res = out_container(otmp);
+    current_container = 0;
+    return res > 0 ? 1 : 0;
 }
 
 /* the stash command */

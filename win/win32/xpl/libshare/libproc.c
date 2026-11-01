@@ -466,6 +466,7 @@ int lib_select_menu(winid wid, int how, MENU_ITEM_P** selected)
 
 void lib_update_inventory(void)
 {
+    gui_windows_dirty = TRUE; /* refresh_gui_windows sends the changes before the next command */
     lib_callbacks.callback_update_inventory();
 }
 

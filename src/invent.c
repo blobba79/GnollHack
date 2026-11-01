@@ -36,6 +36,13 @@ static int ckunpaid(struct obj *);
 static char *safeq_xprname(struct obj *);
 static char *safeq_shortxprname(struct obj *);
 static char display_pickinv(const char *, char *, char *, boolean, int64_t *, int, boolean, const char*, uchar, boolean);
+
+#define MAX_GUI_CONTAINER_WINDOWS 16
+static boolean gui_publish_only = FALSE; /* display_pickinv sends the inventory to the GUI inventory window without selecting */
+static boolean gui_inventory_window_on = FALSE;
+static boolean gui_separate_windows = FALSE;
+static unsigned gui_container_window_oids[MAX_GUI_CONTAINER_WINDOWS];
+static int gui_container_window_count = 0;
 static char display_used_invlets(char, boolean);
 static boolean this_type_only(struct obj *);
 static void dounpaid(void);
@@ -5097,6 +5104,213 @@ handle_inventory_action(char invlet, int64_t code, boolean *return_to_inv_ptr)
     return res;
 }
 
+/*
+ * GUI windows: the client may show the inventory and carried containers in separate windows that stay open.
+ * Their contents are sent as menus that are never selected, at most once per command (refresh_gui_windows),
+ * and the windows send their actions with the #guiaction command. None of this is saved.
+ */
+
+/* Returns TRUE if carried containers open in their own GUI windows instead of the take out / put in menu */
+boolean
+gui_containers_in_windows(void)
+{
+    return gui_separate_windows;
+}
+
+static struct obj *
+gui_invent_obj_by_oid(unsigned oid)
+{
+    struct obj *otmp;
+
+    for (otmp = invent; otmp; otmp = otmp->nobj)
+        if (otmp->o_id == oid)
+            return otmp;
+    return (struct obj *) 0;
+}
+
+static struct obj *
+gui_invent_obj_by_invlet(char invlet)
+{
+    struct obj *otmp;
+
+    for (otmp = invent; otmp; otmp = otmp->nobj)
+        if (otmp->invlet == invlet)
+            return otmp;
+    return (struct obj *) 0;
+}
+
+static void
+gui_remove_container_window(int idx)
+{
+    int i;
+
+    if (idx < 0 || idx >= gui_container_window_count)
+        return;
+    for (i = idx; i < gui_container_window_count - 1; i++)
+        gui_container_window_oids[i] = gui_container_window_oids[i + 1];
+    gui_container_window_count--;
+}
+
+/* Opens, or brings forward, the GUI window that shows the contents of the carried container obj */
+void
+gui_open_container_window(struct obj *obj)
+{
+    int i;
+
+    if (!obj)
+        return;
+
+    for (i = 0; i < gui_container_window_count; i++)
+        if (gui_container_window_oids[i] == obj->o_id)
+            break;
+
+    if (i == gui_container_window_count)
+    {
+        if (gui_container_window_count >= MAX_GUI_CONTAINER_WINDOWS)
+        {
+            /* The oldest window is closed */
+            issue_gui_command(GUI_CMD_CLOSE_CONTAINER_WINDOW, (int) gui_container_window_oids[0], 0, (const char *) 0);
+            gui_remove_container_window(0);
+        }
+        gui_container_window_oids[gui_container_window_count++] = obj->o_id;
+    }
+
+    set_obj_cknown(obj, 1);
+    gui_windows_dirty = TRUE;
+    issue_gui_command(GUI_CMD_OPEN_CONTAINER_WINDOW, (int) obj->o_id, 0, (const char *) 0);
+}
+
+/* Sends the contents of the carried container cont to its GUI window; the identifier of each row is the o_id */
+static void
+gui_publish_container_window(struct obj *cont)
+{
+    winid win;
+    anything any;
+    struct obj *otmp;
+    char subbuf[BUFSZ];
+    int cnt = 0;
+    int glyph = obj_to_glyph(cont, rn2_on_display_rng);
+    int gui_glyph = maybe_get_replaced_glyph(glyph, u.ux, u.uy, data_to_replacement_info(glyph, LAYER_OBJECT, cont, (struct monst *) 0, 0UL, 0UL, 0UL, MAT_NONE, 0));
+
+    win = create_nhwindow_ex(NHW_MENU, GHWINDOW_STYLE_OBJECT_COMMAND_MENU, gui_glyph, extended_create_window_info_from_obj(cont));
+    start_menu_style(win, GHMENU_STYLE_CONTAINER_CONTENTS);
+    for (otmp = cont->cobj; otmp; otmp = otmp->nobj)
+    {
+        int oglyph = obj_to_glyph(otmp, rn2_on_display_rng);
+        int ogui_glyph = maybe_get_replaced_glyph(oglyph, u.ux, u.uy, data_to_replacement_info(oglyph, LAYER_OBJECT, otmp, (struct monst *) 0, 0UL, 0UL, 0UL, MAT_NONE, 0));
+
+        any = zeroany;
+        any.a_int64 = (int64_t) otmp->o_id;
+        add_extended_menu(win, ogui_glyph, &any, 0, 0, ATR_NONE, NO_COLOR,
+                          doname_with_weight_first(otmp, TRUE, FALSE, 0), MENU_UNSELECTED, obj_to_extended_menu_info(otmp));
+        cnt++;
+    }
+    Sprintf(subbuf, "%d item%s", cnt, plur(cnt));
+    end_menu_ex(win, cxname(cont), subbuf);
+    destroy_nhwindow(win);
+}
+
+/* Sends the inventory and the contents of the open containers to the GUI windows, if anything has changed */
+void
+refresh_gui_windows(void)
+{
+    int i;
+
+    if (!gui_windows_dirty)
+        return;
+    gui_windows_dirty = FALSE;
+
+    if (gui_inventory_window_on && WIN_INVEN != WIN_ERR)
+    {
+        int64_t cnt = 0;
+
+        gui_publish_only = TRUE;
+        (void) display_pickinv((const char *) 0, (char *) 0, (char *) 0, FALSE, &cnt, SHOWWEIGHTS_INVENTORY, TRUE,
+                               (const char *) 0, 1, FALSE);
+        gui_publish_only = FALSE;
+    }
+
+    for (i = 0; i < gui_container_window_count; )
+    {
+        struct obj *cont = gui_invent_obj_by_oid(gui_container_window_oids[i]);
+
+        if (!cont || !Is_container(cont))
+        {
+            /* No longer carried */
+            issue_gui_command(GUI_CMD_CLOSE_CONTAINER_WINDOW, (int) gui_container_window_oids[i], 0, (const char *) 0);
+            gui_remove_container_window(i);
+            continue;
+        }
+        gui_publish_container_window(cont);
+        i++;
+    }
+}
+
+/* Keys reach the core as single bytes */
+static int
+gui_read_byte(void)
+{
+    return nhgetch() & 0xFF;
+}
+
+/* The #guiaction command: performs an action sent by a GUI window; reads the bytes GUI_ACTION_MAGIC, the action,
+   the inventory letter and the target, and an o_id as four bytes, least significant first */
+int
+doguiaction(void)
+{
+    int action, invlet, target, i;
+    unsigned oid;
+    struct obj *otmp;
+
+    if (gui_read_byte() != GUI_ACTION_MAGIC)
+        return 0;
+    action = gui_read_byte();
+    invlet = gui_read_byte();
+    target = gui_read_byte();
+    oid = (unsigned) gui_read_byte();
+    oid |= (unsigned) gui_read_byte() << 8;
+    oid |= (unsigned) gui_read_byte() << 16;
+    oid |= (unsigned) gui_read_byte() << 24;
+    savech(0); /* #guiaction itself is not repeated */
+
+    switch (action)
+    {
+    case GUI_ACTION_INVENTORY_WINDOW:
+        gui_inventory_window_on = (target != 0);
+        gui_windows_dirty = TRUE;
+        refresh_gui_windows();
+        return 0;
+    case GUI_ACTION_SEPARATE_WINDOWS:
+        gui_separate_windows = (target != 0);
+        return 0;
+    case GUI_ACTION_CLOSE_CONTAINER:
+        for (i = 0; i < gui_container_window_count; i++)
+        {
+            if (gui_container_window_oids[i] == oid)
+            {
+                gui_remove_container_window(i);
+                break;
+            }
+        }
+        return 0;
+    case INVENTORY_ACTION_MENU:
+        otmp = gui_invent_obj_by_invlet((char) invlet);
+        return otmp ? display_item_command_menu(otmp, -1, (boolean *) 0) : 0;
+    case INVENTORY_ACTION_TAKEOUT:
+        otmp = gui_invent_obj_by_invlet((char) invlet);
+        if (!otmp || !Is_container(otmp))
+            return 0;
+        return gui_take_out_of_container(otmp, oid);
+    default:
+        if (action >= INVENTORY_ACTION_DEFAULT && action <= INVENTORY_ACTION_DROP)
+        {
+            boolean return_to_inv = FALSE;
+            return handle_inventory_action((char) invlet, INVENTORY_ACTION_BASE - ((int64_t) action * 256 + target), &return_to_inv);
+        }
+        return 0;
+    }
+}
+
 
 int
 dolastpickeditem(void)
@@ -5288,6 +5502,13 @@ display_pickinv(const char *lets, char *xtra_choice, char *query, boolean want_r
 
     if (n == 0) 
     {
+        if (gui_publish_only)
+        {
+            /* An empty inventory window */
+            start_menu_style(win, GHMENU_STYLE_PERMANENT_INVENTORY);
+            end_menu_ex(win, "Inventory", not_carrying_anything);
+            return 0;
+        }
         pline("%s.", not_carrying_anything);
         return 0;
     }
@@ -5332,7 +5553,7 @@ display_pickinv(const char *lets, char *xtra_choice, char *query, boolean want_r
     sortedinvent = sortloot(&invent, sortflags, FALSE,
                             (boolean (*)(struct obj *)) 0);
 
-    start_menu_style(win, addinventoryheader == 2 ? GHMENU_STYLE_INVENTORY_EQUIPMENT : addinventoryheader ? GHMENU_STYLE_INVENTORY : GHMENU_STYLE_PICK_ITEM_LIST);
+    start_menu_style(win, gui_publish_only ? GHMENU_STYLE_PERMANENT_INVENTORY : addinventoryheader == 2 ? GHMENU_STYLE_INVENTORY_EQUIPMENT : addinventoryheader ? GHMENU_STYLE_INVENTORY : GHMENU_STYLE_PICK_ITEM_LIST);
     any = zeroany;
     if (wizard && iflags.override_ID) 
     {
@@ -5529,6 +5750,9 @@ nextclass:
         end_menu_ex(win, query && *query ? query : (char*)0, headertext && strcmp(headertext, "") != 0 ? headertext : (char*)0);
 #endif
     }
+
+    if (gui_publish_only)
+        return 0; /* The client keeps the menu for its inventory window; nothing is selected */
 
     n = select_menu(win,
                     wizid ? PICK_ANY : want_reply ? PICK_ONE : PICK_NONE,

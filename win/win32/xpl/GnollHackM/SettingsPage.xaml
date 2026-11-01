@@ -699,6 +699,14 @@
                                     HorizontalOptions="Start" />
                                 <Switch Grid.Column="1" x:Name="InventoryGridModeSwitch" HorizontalOptions="End" VerticalOptions="Center" />
                             </Grid>
+                            <Grid x:Name="SeparateGuiWindowsGrid" ColumnSpacing="6" ColumnDefinitions="*,Auto" HorizontalOptions="Fill" HeightRequest="40">
+                                <Label Text="Separate Windows (PC)"
+                                    FontFamily="Underwood" TextColor="Black"
+                                    FontSize="15"
+                                    VerticalOptions="Center" 
+                                    HorizontalOptions="Start" />
+                                <Switch Grid.Column="1" x:Name="SeparateGuiWindowsSwitch" HorizontalOptions="End" VerticalOptions="Center" />
+                            </Grid>
                             <Grid ColumnSpacing="6" ColumnDefinitions="*,Auto" HorizontalOptions="Fill" HeightRequest="40">
                                 <Label Text="Equipment Flip Animation"
                                     FontFamily="Underwood" TextColor="Black"

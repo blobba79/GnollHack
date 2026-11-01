@@ -3409,6 +3409,9 @@ namespace GnollHackX.Pages.Game
                                 EnqueueTask(ref tasks, RestartGameAfterPageDestruction());
                                 break;
                             case GHRequestType.ShowMenuPage:
+                                /* An item command menu asked for by a GUI window is shown there */
+                                if (GHGuiWindows.TryShowItemCommandPopup(req.RequestingGame, req.RequestMenuInfo, req.RequestingGHWindow))
+                                    break;
                                 EnqueueTask(ref tasks, ShowMenuCanvas(req.RequestMenuInfo != null ? req.RequestMenuInfo : new GHMenuInfo(ghmenu_styles.GHMENU_STYLE_GENERAL), req.RequestingGHWindow));
                                 break;
                             case GHRequestType.HideMenuPage:
@@ -4663,6 +4666,7 @@ namespace GnollHackX.Pages.Game
             ShutDownCanvasViews();
             GHApp.CurrentGHGame = null;
             IsGameOn = false;
+            GHGuiWindows.GameEnded(); /* The separate windows close; the inventory window opens again with the next game */
             if (GHApp.DoAppExitOnReturn)
                 _mainPage.ForceCloseApp();
             else
@@ -18753,7 +18757,7 @@ namespace GnollHackX.Pages.Game
 
 
         SKColor _darkEquipmentSlotTitleColor = new SKColor(192, 192, 192);
-        EquipmentSlot[] _equipmentSlots = new EquipmentSlot[] 
+        private static readonly EquipmentSlot[] _equipmentSlots = new EquipmentSlot[] 
         {
             new EquipmentSlot("Right Hand", (int)InventorySlotPictureIndices.WeaponRight, 0, 0, obj_worn_flags.W_WEP, obj_class_types.WEAPON_CLASS, obj_armor_types.MAX_ARMOR_TYPES),
             new EquipmentSlot("Left Hand", (int)InventorySlotPictureIndices.WeaponLeft, (int)InventorySlotPictureIndices.Shield, 1, obj_worn_flags.W_WEP2, obj_class_types.ARMOR_CLASS, obj_armor_types.ARM_SHIELD),
