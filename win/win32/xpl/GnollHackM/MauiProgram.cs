@@ -524,6 +524,9 @@ public static class MauiProgram
                     {
                         if (args == null)
                             return;
+                        /* The separate inventory, container and Overseer windows (GHGuiWindows) do not change the main window's focus state */
+                        if (GHApp.WindowsXamlWindow != null && window != GHApp.WindowsXamlWindow)
+                            return;
 
                         // For WinUI, use WindowActivationState
                         if (args.WindowActivationState == WindowActivationState.CodeActivated ||
@@ -538,7 +541,8 @@ public static class MauiProgram
                         {
                             // Not focused
                             GHApp.WindowFocused = false;
-                            GHApp.UnfocusedMuteMode = true;
+                            /* The sound stays on when one of the app's own separate windows took the focus */
+                            GHApp.UnfocusedMuteMode = !WindowFocusHelper.IsOwnProcessForeground();
                             GHApp.MaybeWriteLowLevelGHLog("OnActivated: Window is not focused. WindowActivationState: " + args.WindowActivationState.ToString() + ", Foreground: " + WindowFocusHelper.DescribeForeground(window) + ", Windowed Mode: " + GHApp.WindowedMode, true, GHConstants.SentryGnollHackGeneralCategoryName);
                         }
                     });
@@ -857,6 +861,9 @@ public class KeyboardHook
 
     private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
     private static bool _foregroundMismatchLogged = false;
 
     // WORKAROUND(WA-MAUI-0019): Re-entrant window activation throws "already activated" or "already deactivated"
@@ -868,6 +875,9 @@ public class KeyboardHook
         if (WindowFocusHelper.IsOwnProcessForeground())
         {
             _foregroundMismatchLogged = false;
+            /* Keys typed in a separate window (GHGuiWindows), such as the Overseer chat, belong to that window, not the game */
+            if (GHApp.WindowsXamlWindow != null && GetForegroundWindow() != WinRT.Interop.WindowNative.GetWindowHandle(GHApp.WindowsXamlWindow))
+                return false;
             return true;
         }
         if (!_foregroundMismatchLogged)
