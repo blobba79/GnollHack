@@ -1660,6 +1660,7 @@ namespace GnollHackX
                 _longer_message_history = new GHMsgHistoryList(_longer_message_history);
                 _longer_message_history.TryAdd(newmsg);
             }
+            Interlocked.Increment(ref _addedMessageCount);
 
             if(!isRestoring)
             {
@@ -5312,6 +5313,30 @@ namespace GnollHackX
                 }
                 while (GHApp.PauseReplay && !GHApp.IsReplaySearching);
             }
+        }
+
+        private int _addedMessageCount = 0;
+        /* The number of messages added in this game; GetMessagesSince reads the ones added after an earlier count */
+        public int AddedMessageCount { get { return Interlocked.CompareExchange(ref _addedMessageCount, 0, 0); } }
+
+        /* The texts of the messages added since AddedMessageCount was addedCountBefore, at most max of the newest.
+           Read from another thread than the game thread, like ExportFullMessageHistory. */
+        internal List<string> GetMessagesSince(int addedCountBefore, int max)
+        {
+            List<string> res = new List<string>();
+            try
+            {
+                GHMsgHistoryList history = _longer_message_history;
+                int count = history.Count;
+                int n = Math.Min(Math.Min(AddedMessageCount - addedCountBefore, count), max);
+                for (int i = count - n; i < count; i++)
+                    res.Add(history[i].Text);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+            return res;
         }
 
         internal string ExportFullMessageHistory()

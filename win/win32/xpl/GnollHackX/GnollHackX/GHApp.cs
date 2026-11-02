@@ -295,6 +295,12 @@ namespace GnollHackX
             /* LocalOverseerUserName and LocalOverseerPassword are loaded from the secure
                store in MigrateAndLoadSecureCredentials. */
 #endif
+            OverseerUseLocalAi = Preferences.Get("OverseerUseLocalAi", false);
+            LocalAiAddress = Preferences.Get("LocalAiAddress", GHConstants.DefaultLocalAiAddress);
+            LocalAiKey = Preferences.Get("LocalAiKey", GHConstants.DefaultLocalAiKey);
+            LocalAiModel = Preferences.Get("LocalAiModel", GHConstants.DefaultLocalAiModel);
+            LocalAiInstructionsPath = Preferences.Get("LocalAiInstructionsPath", "");
+            LocalAiSourceFolder = Preferences.Get("LocalAiSourceFolder", "");
             EmptyWishIsNothing = Preferences.Get("EmptyWishIsNothing", true);
             RecommendedSettingsChecked = Preferences.Get("RecommendedSettingsChecked", false);
             RecordGame = Preferences.Get("RecordGame", false);
@@ -4439,6 +4445,15 @@ namespace GnollHackX
 #if DEBUG
         public static bool OverseerUseLocalAddress { get; set; }
         public static string LocalOverseerAddress { get; set; }
+        /* Gnoll Overseer on the player's own OpenAI-compatible AI server (GHLocalOverseerClient) */
+        public static bool OverseerUseLocalAi { get; set; }
+        public static string LocalAiAddress { get; set; }
+        public static string LocalAiKey { get; set; }
+        public static string LocalAiModel { get; set; }
+        /* A Markdown file used as the local AI Overseer's system prompt; empty for the built-in prompt */
+        public static string LocalAiInstructionsPath { get; set; }
+        /* The GnollHack source folder for the local AI Overseer's code tools; empty to find it automatically */
+        public static string LocalAiSourceFolder { get; set; }
         public static string LocalOverseerUserName { get; set; }
         public static string LocalOverseerPassword { get; set; }
 #endif

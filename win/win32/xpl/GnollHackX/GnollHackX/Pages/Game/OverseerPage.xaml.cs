@@ -1811,7 +1811,7 @@ namespace GnollHackX.Pages.Game
         private const int DefaultMessageLimit = 250;
 
         /// <summary>
-        /// Executes the requested tool. Pure C# tools run on the background
+        /// Executes the requested tool; also used by the local AI Overseer (GHLocalOverseerClient). Pure C# tools run on the background
         /// thread directly; P/Invoke tools are dispatched to the main thread
         /// via MainThread.InvokeOnMainThreadAsync for C core safety.
         /// </summary>
@@ -1823,7 +1823,7 @@ namespace GnollHackX.Pages.Game
         /// and reads from the UI thread are safe. When accessed via the About
         /// page there is no GameThread, so UI thread is the only option.
         /// </remarks>
-        private async Task<string> DispatchToolCallAsync(string toolName,
+        internal static async Task<string> DispatchToolCallAsync(string toolName,
             JObject parameters)
         {
             var currentGame = GHApp.CurrentGHGame;
@@ -1948,7 +1948,7 @@ namespace GnollHackX.Pages.Game
         /// List mode (no item_id): returns just names and IDs.
         /// Read mode (item_id specified): returns full text of that specific manual.
         /// </summary>
-        private string GetPlayerLibraryResult(JObject parameters)
+        private static string GetPlayerLibraryResult(JObject parameters)
         {
             var manuals = new Dictionary<int, StoredManual>();
             GHApp.PopulateManuals(manuals);
@@ -1995,7 +1995,7 @@ namespace GnollHackX.Pages.Game
         /// List mode (no item_id): returns just names and IDs.
         /// Read mode (item_id specified): returns full text of that consultation.
         /// </summary>
-        private string GetOracleConsultationsResult(JObject parameters)
+        private static string GetOracleConsultationsResult(JObject parameters)
         {
             var consultations = new Dictionary<int, StoredManual>();
             GHApp.PopulateHints(consultations,
@@ -2268,7 +2268,7 @@ namespace GnollHackX.Pages.Game
         /// Returns entries from the player's local xlogfile with rich metadata.
         /// Supports pagination via limit/offset parameters. Newest entries first.
         /// </summary>
-        private string GetPlayerXlogResult(JObject parameters)
+        private static string GetPlayerXlogResult(JObject parameters)
         {
             string xlogPath = Path.Combine(GHApp.GHPath, "xlogfile");
             string dumplogDir = Path.Combine(GHApp.GHPath,
@@ -2376,7 +2376,7 @@ namespace GnollHackX.Pages.Game
         /// .txt/.html pairs, matches to xlog entries.
         /// Read mode (filename specified): reads that specific dumplog file.
         /// </summary>
-        private string GetPlayerDumplogsResult(JObject parameters)
+        private static string GetPlayerDumplogsResult(JObject parameters)
         {
             string dumplogDir = Path.Combine(GHApp.GHPath,
                 GHConstants.DumplogDirectory);
@@ -2535,7 +2535,7 @@ namespace GnollHackX.Pages.Game
         /// Reads the GnollHack application log (ghlog.txt) from the device.
         /// Supports optional filtering by search_term and limiting to last_n lines.
         /// </summary>
-        private string GetAppLogResult(JObject parameters)
+        private static string GetAppLogResult(JObject parameters)
         {
             string logPath = Path.Combine(GHApp.GHPath,
                 GHConstants.AppLogDirectory, GHConstants.AppLogFileName);
@@ -2587,7 +2587,7 @@ namespace GnollHackX.Pages.Game
         /// Reads the GnollHack panic log from the device.
         /// Contains C core engine panic/crash information.
         /// </summary>
-        private string GetPanicLogResult(JObject parameters)
+        private static string GetPanicLogResult(JObject parameters)
         {
             string panicPath = Path.Combine(GHApp.GHPath, "paniclog");
 
@@ -2623,7 +2623,7 @@ namespace GnollHackX.Pages.Game
         /// line per report with its Result and Location headline.
         /// Read mode (filename specified): the report text, cut to max_length.
         /// </summary>
-        private string GetPerformanceReportsResult(JObject parameters)
+        private static string GetPerformanceReportsResult(JObject parameters)
         {
             string reportsDir = GHPerformanceDiagnosticRunner.ReportsDirectory;
             string filenameParam = parameters?["filename"]?.ToString();

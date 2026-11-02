@@ -1975,6 +1975,64 @@
                                     HorizontalOptions="Start" />
                                 <Switch Grid.Column="1" x:Name="OverseerSendContextSwitch" HorizontalOptions="End" VerticalOptions="Center" />
                             </Grid>
+                            <Grid ColumnSpacing="6" ColumnDefinitions="*,Auto" HorizontalOptions="Fill" HeightRequest="40">
+                                <Label Text="Use Local AI"
+                                    FontFamily="Underwood" TextColor="Black"
+                                    FontSize="15"
+                                    VerticalOptions="Center" 
+                                    HorizontalOptions="Start" />
+                                <Switch Grid.Column="1" x:Name="LocalAiSwitch" HorizontalOptions="End" VerticalOptions="Center" Toggled="LocalAiSwitch_Toggled" />
+                            </Grid>
+                            <Grid x:Name="LocalAiAddressGrid" ColumnSpacing="6" ColumnDefinitions="*,Auto" HorizontalOptions="Fill" HeightRequest="40">
+                                <Label Text="  Local AI Address"
+                                    x:Name="LocalAiAddressLabel" 
+                                    FontFamily="Underwood" TextColor="Black"
+                                    FontSize="15"
+                                    VerticalOptions="Center" 
+                                    HorizontalOptions="Start" />
+                                <Entry Grid.Column="1" x:Name="LocalAiAddressEntry" MaxLength="255" HorizontalOptions="End" VerticalOptions="Center" Placeholder="http://localhost:8080" PlaceholderColor="Gray" IsEnabled="False"
+                                    Keyboard="Plain" TextColor="Black" FontFamily="LatoRegular" FontSize="14" BackgroundColor="Transparent" HorizontalTextAlignment="Center" WidthRequest="200" />
+                            </Grid>
+                            <Grid x:Name="LocalAiKeyGrid" ColumnSpacing="6" ColumnDefinitions="*,Auto" HorizontalOptions="Fill" HeightRequest="40">
+                                <Label Text="  Local AI Key"
+                                    x:Name="LocalAiKeyLabel" 
+                                    FontFamily="Underwood" TextColor="Black"
+                                    FontSize="15"
+                                    VerticalOptions="Center" 
+                                    HorizontalOptions="Start" />
+                                <Entry Grid.Column="1" x:Name="LocalAiKeyEntry" MaxLength="255" HorizontalOptions="End" VerticalOptions="Center" Placeholder="API key" PlaceholderColor="Gray" IsEnabled="False" IsPassword="True"
+                                    Keyboard="Plain" TextColor="Black" FontFamily="LatoRegular" FontSize="14" BackgroundColor="Transparent" HorizontalTextAlignment="Center" WidthRequest="200" />
+                            </Grid>
+                            <Grid x:Name="LocalAiModelGrid" ColumnSpacing="6" ColumnDefinitions="*,Auto" HorizontalOptions="Fill" HeightRequest="40">
+                                <Label Text="  Local AI Model"
+                                    x:Name="LocalAiModelLabel" 
+                                    FontFamily="Underwood" TextColor="Black"
+                                    FontSize="15"
+                                    VerticalOptions="Center" 
+                                    HorizontalOptions="Start" />
+                                <Entry Grid.Column="1" x:Name="LocalAiModelEntry" MaxLength="255" HorizontalOptions="End" VerticalOptions="Center" Placeholder="Model name" PlaceholderColor="Gray" IsEnabled="False"
+                                    Keyboard="Plain" TextColor="Black" FontFamily="LatoRegular" FontSize="14" BackgroundColor="Transparent" HorizontalTextAlignment="Center" WidthRequest="200" />
+                            </Grid>
+                            <Grid x:Name="LocalAiInstructionsGrid" ColumnSpacing="6" ColumnDefinitions="*,Auto" HorizontalOptions="Fill" HeightRequest="40">
+                                <Label Text="  Local AI Instructions"
+                                    x:Name="LocalAiInstructionsLabel" 
+                                    FontFamily="Underwood" TextColor="Black"
+                                    FontSize="15"
+                                    VerticalOptions="Center" 
+                                    HorizontalOptions="Start" />
+                                <Entry Grid.Column="1" x:Name="LocalAiInstructionsEntry" MaxLength="1024" HorizontalOptions="End" VerticalOptions="Center" Placeholder="Built-in" PlaceholderColor="Gray" IsEnabled="False"
+                                    Keyboard="Plain" TextColor="Black" FontFamily="LatoRegular" FontSize="14" BackgroundColor="Transparent" HorizontalTextAlignment="Center" WidthRequest="200" />
+                            </Grid>
+                            <Grid x:Name="LocalAiSourceFolderGrid" ColumnSpacing="6" ColumnDefinitions="*,Auto" HorizontalOptions="Fill" HeightRequest="40">
+                                <Label Text="  Local AI Source Folder"
+                                    x:Name="LocalAiSourceFolderLabel" 
+                                    FontFamily="Underwood" TextColor="Black"
+                                    FontSize="15"
+                                    VerticalOptions="Center" 
+                                    HorizontalOptions="Start" />
+                                <Entry Grid.Column="1" x:Name="LocalAiSourceFolderEntry" MaxLength="1024" HorizontalOptions="End" VerticalOptions="Center" Placeholder="Automatic" PlaceholderColor="Gray" IsEnabled="False"
+                                    Keyboard="Plain" TextColor="Black" FontFamily="LatoRegular" FontSize="14" BackgroundColor="Transparent" HorizontalTextAlignment="Center" WidthRequest="200" />
+                            </Grid>
                             <Grid ColumnSpacing="6" ColumnDefinitions="*,Auto" HorizontalOptions="Fill" HeightRequest="40"
                                   x:Name="OverseerLocalAddressGrid" IsVisible="False">
                                     <Label Text="Use Local Address"

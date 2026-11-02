@@ -182,6 +182,12 @@ namespace GnollHackX.Pages.MainScreen
             { "On Switching Apps", ("Save game or create checkpoint when switching apps.", "**Save Game**: The game is automatically saved and restored when the player returns. Menus close.\n**Checkpoint**: The game creates a checkpoint and doesn't close menus, but recovers to checkpoint if terminated.") },
             { "Map GPU Cache", ("Cache size for Skia GPU map rendering.", "Determines the cache size for Skia GPU rendering for the map. Large numbers can lead to out of memory.") },
             { "Menu GPU Cache", ("Cache size for Skia GPU menu rendering.", "Determines the cache size for Skia GPU rendering for the menu and more commands pages.") },
+            { "Use Local AI", ("Use your own AI for Gnoll Overseer.", "**On:** The Overseer button opens a Gnoll Overseer that runs on your own OpenAI-compatible AI server, such as llama.cpp's llama-server. Your game data stays on your computer.\n**Off:** The official Gnoll Overseer is used.") },
+            { "Local AI Address", ("Address of your AI server.", "The address of your OpenAI-compatible AI server, for example http://localhost:8080.") },
+            { "Local AI Key", ("API key of your AI server.", "The API key your AI server expects, if any.") },
+            { "Local AI Model", ("Model name on your AI server.", "The model name sent to your AI server.") },
+            { "Local AI Instructions", ("Instructions file for your AI.", "The full path of a Markdown file with instructions for your local Gnoll Overseer, used as its system prompt. Leave it empty for the built-in instructions.") },
+            { "Local AI Source Folder", ("GnollHack source code for your AI.", "The folder of the GnollHack source code (with the src, include and dat folders) that your local Gnoll Overseer searches to verify rules. Leave it empty to find it automatically when the game is built from the source code.") },
             { "Send Game Context", ("Auto-send game state when opening Gnoll Overseer.", "When enabled (default), opening Gnoll Overseer from the game menu automatically sends the current game snapshot and message history. When disabled, no such data is sent.") },
             { "Use Local Address", ("Run Gnoll Overseer server at a local IP address.", "Enables the Gnoll Overseer to run at a local IP address.") },
             { "Local Address", ("Local IP address for the Gnoll Overseer server.", "Local IP address where Gnoll Overseer server can be found.") },
@@ -1168,6 +1174,18 @@ namespace GnollHackX.Pages.MainScreen
 
             /* Overseer settings */
             GHApp.OverseerSendGameContext = OverseerSendContextSwitch.IsToggled;
+            GHApp.OverseerUseLocalAi = LocalAiSwitch.IsToggled;
+            Preferences.Set("OverseerUseLocalAi", LocalAiSwitch.IsToggled);
+            GHApp.LocalAiAddress = string.IsNullOrWhiteSpace(LocalAiAddressEntry.Text) ? GHConstants.DefaultLocalAiAddress : LocalAiAddressEntry.Text.Trim();
+            Preferences.Set("LocalAiAddress", GHApp.LocalAiAddress);
+            GHApp.LocalAiKey = LocalAiKeyEntry.Text ?? "";
+            Preferences.Set("LocalAiKey", GHApp.LocalAiKey);
+            GHApp.LocalAiModel = string.IsNullOrWhiteSpace(LocalAiModelEntry.Text) ? GHConstants.DefaultLocalAiModel : LocalAiModelEntry.Text.Trim();
+            Preferences.Set("LocalAiModel", GHApp.LocalAiModel);
+            GHApp.LocalAiInstructionsPath = LocalAiInstructionsEntry.Text?.Trim().Trim('"') ?? "";
+            Preferences.Set("LocalAiInstructionsPath", GHApp.LocalAiInstructionsPath);
+            GHApp.LocalAiSourceFolder = LocalAiSourceFolderEntry.Text?.Trim().Trim('"') ?? "";
+            Preferences.Set("LocalAiSourceFolder", GHApp.LocalAiSourceFolder);
             Preferences.Set("OverseerSendGameContext", OverseerSendContextSwitch.IsToggled);
             GHApp.OverseerEnableClientTools = OverseerClientToolsSwitch.IsToggled;
             Preferences.Set(GHConstants.OverseerEnableClientToolsKey, OverseerClientToolsSwitch.IsToggled);
@@ -2006,6 +2024,13 @@ namespace GnollHackX.Pages.MainScreen
             }
             /* Overseer switches */
             OverseerSendContextSwitch.IsToggled = GHApp.OverseerSendGameContext;
+            LocalAiSwitch.IsToggled = GHApp.OverseerUseLocalAi;
+            LocalAiAddressEntry.Text = GHApp.LocalAiAddress ?? GHConstants.DefaultLocalAiAddress;
+            LocalAiKeyEntry.Text = GHApp.LocalAiKey ?? "";
+            LocalAiModelEntry.Text = GHApp.LocalAiModel ?? GHConstants.DefaultLocalAiModel;
+            LocalAiInstructionsEntry.Text = GHApp.LocalAiInstructionsPath ?? "";
+            LocalAiSourceFolderEntry.Text = GHApp.LocalAiSourceFolder ?? "";
+            UpdateLocalAiEntriesEnabled(GHApp.OverseerUseLocalAi);
             OverseerClientToolsSwitch.IsToggled = GHApp.OverseerEnableClientTools;
             if (OverseerGameActionsGrid.IsVisible)
             {
@@ -2670,6 +2695,23 @@ namespace GnollHackX.Pages.MainScreen
             UpdateLocalAddressEntryEnabled(e.Value);
         }
 
+        private void UpdateLocalAiEntriesEnabled(bool enabled)
+        {
+            Color color = enabled ? (GHApp.DarkMode ? GHColors.White : GHColors.Black) : GHColors.Gray;
+            foreach (Entry entry in new Entry[] { LocalAiAddressEntry, LocalAiKeyEntry, LocalAiModelEntry, LocalAiInstructionsEntry, LocalAiSourceFolderEntry })
+            {
+                entry.IsEnabled = enabled;
+                entry.TextColor = color;
+            }
+            foreach (Label label in new Label[] { LocalAiAddressLabel, LocalAiKeyLabel, LocalAiModelLabel, LocalAiInstructionsLabel, LocalAiSourceFolderLabel })
+                label.TextColor = color;
+        }
+
+        private void LocalAiSwitch_Toggled(object sender, ToggledEventArgs e)
+        {
+            UpdateLocalAiEntriesEnabled(e.Value);
+        }
+
         private void DeveloperSwitch_Toggled(object sender, ToggledEventArgs e)
         {
             if (e.Value)
@@ -2833,6 +2875,22 @@ namespace GnollHackX.Pages.MainScreen
                     _closeCheckFailedView = BonesAllowedUsersEntry;
                     await MainScrollView.ScrollToAsync(BonesAllowedUsersGrid.X, BonesAllowedUsersGrid.Y, true);
                     BonesAllowedUsersEntry.Focus();
+                    CloseButton.IsEnabled = true;
+                    _backPressed = false;
+                    return;
+                }
+            }
+
+            if (LocalAiSwitch.IsToggled)
+            {
+                LocalAiAddressLabel.TextColor = GHApp.DarkMode ? GHColors.White : GHColors.Black;
+                if (!string.IsNullOrWhiteSpace(LocalAiAddressEntry.Text)
+                    && (!Uri.TryCreate(LocalAiAddressEntry.Text.Trim(), UriKind.Absolute, out Uri localAiUri) || (localAiUri.Scheme != Uri.UriSchemeHttp && localAiUri.Scheme != Uri.UriSchemeHttps)))
+                {
+                    LocalAiAddressLabel.TextColor = GHColors.Red;
+                    _closeCheckFailedView = LocalAiAddressEntry;
+                    await MainScrollView.ScrollToAsync(LocalAiAddressGrid.X, LocalAiAddressGrid.Y, true);
+                    LocalAiAddressEntry.Focus();
                     CloseButton.IsEnabled = true;
                     _backPressed = false;
                     return;
@@ -3196,7 +3254,13 @@ namespace GnollHackX.Pages.MainScreen
             XlogAccountButton.IsEnabled = false;
             GHApp.PlayButtonClickedSound();
             GHApp.XlogReleaseAccount = XlogReleaseAccountSwitch.IsToggled;
-            await GHApp.OpenBrowser(this, "GnollHack Account", new Uri(GHApp.XlogAccountAddress));
+            /* A build without the secrets file's addresses has no account link; new Uri would throw and close the app */
+            Uri accountUri;
+            if (Uri.TryCreate(GHApp.XlogAccountAddress, UriKind.Absolute, out accountUri))
+                await GHApp.OpenBrowser(this, "GnollHack Account", accountUri);
+            else
+                await ShowMessagePopupAsync("No Account Link",
+                    "This build of GnollHack has no address for the GnollHack Account page. Set up your account in the official version of GnollHack, or enter a custom account link with the Link button.", "OK");
             XlogAccountButton.IsEnabled = true;
         }
 

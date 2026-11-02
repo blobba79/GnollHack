@@ -240,6 +240,9 @@ namespace GnollHackX
         public const string GnollHackWebPage = "https://gnollhack.com";
         public const string GnollHackWikiPage = "https://wiki.gnollhack.com";
         public const string GnollHackOverseerPage = "https://overseer.gnollhack.com";
+        public const string DefaultLocalAiAddress = "http://localhost:8080";
+        public const string DefaultLocalAiKey = "local";
+        public const string DefaultLocalAiModel = "claude-sonnet-4-5";
         public const string GnollHackAccountPage = "https://account.gnollhack.com";
         public const string OverseerEnableClientToolsKey = "OverseerEnableClientTools";
         public const bool OverseerEnableClientToolsDefault = true;
